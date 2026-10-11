@@ -1,5 +1,6 @@
 package com.example.server.dto.cart;
 
+/** Body of POST /api/cart/items. */
 public class CartItemRequest {
     private Long productId;
     private Integer quantity;

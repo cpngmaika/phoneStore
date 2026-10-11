@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Shopping cart: each user owns exactly one cart (one-to-one, unique user_id). */
 @Entity
 @Table(name = "carts")
 public class Cart {
@@ -23,13 +24,11 @@ public class Cart {
     )
     private User user;
 
-    @OneToMany(
-            mappedBy = "cart",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<CartItem> items = new ArrayList<>();
+    /** Removing an item from this list deletes its row (orphanRemoval). */
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LineItem> items = new ArrayList<>();
 
+    /** Required by JPA. */
     protected Cart() {
     }
 
@@ -37,39 +36,30 @@ public class Cart {
         this.user = user;
     }
 
+    /** Total amount of the cart = sum of every line item subtotal. */
     public BigDecimal getTotalAmount() {
         BigDecimal total = BigDecimal.ZERO;
-        if (items != null) {
-            for (CartItem item : items) {
-                total = total.add(item.getSubtotal());
-            }
+        for (LineItem item : items) {
+            total = total.add(item.getSubtotal());
         }
         return total;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public List<CartItem> getItems() {
-        return items;
-    }
-
-    public void addItem(CartItem item) {
+    /** Keeps both sides of the relationship in sync. */
+    public void addItem(LineItem item) {
         items.add(item);
         item.setCart(this);
     }
 
-    public void removeItem(CartItem item) {
+    public void removeItem(LineItem item) {
         items.remove(item);
         item.setCart(null);
     }
+
+    public Long getId() { return id; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public List<LineItem> getItems() { return items; }
 }
