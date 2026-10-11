@@ -1,7 +1,6 @@
 package com.example.server.model;
 
 import com.example.server.model.enums.PaymentMethod;
-import com.example.server.model.enums.PaymentStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,9 +26,6 @@ public class Payment {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private PaymentStatus status;
 
     @Column(name = "payment_code", unique = true)
     private String paymentCode;
@@ -52,6 +48,4 @@ public class Payment {
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 
-    public PaymentStatus getStatus() { return status; }
-    public void setStatus(PaymentStatus status) { this.status = status; }
 }

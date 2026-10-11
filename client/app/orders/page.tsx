@@ -42,7 +42,7 @@ export default async function OrdersPage() {
                     {order.orderCode}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.totalAmount)}
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.amount)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

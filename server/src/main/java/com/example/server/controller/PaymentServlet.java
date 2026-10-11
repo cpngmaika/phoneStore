@@ -6,7 +6,6 @@ import com.example.server.model.Order;
 import com.example.server.model.Payment;
 import com.example.server.model.enums.OrderStatus;
 import com.example.server.model.enums.PaymentMethod;
-import com.example.server.model.enums.PaymentStatus;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -35,7 +34,9 @@ public class PaymentServlet extends HttpServlet {
 
     private final OrderDAOImpl orderDAO = new OrderDAOImpl();
     private final PaymentDAOImpl paymentDAO = new PaymentDAOImpl();
-    private final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+    private final Dotenv dotenv = Dotenv.configure()
+            .directory("C:/Users/hp/projects/app/phoneStore/server")
+            .load();
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -119,7 +120,9 @@ public class PaymentServlet extends HttpServlet {
             if (existingPayment != null) {
                 Map<String, Object> responseBody = new LinkedHashMap<>();
 
-                responseBody.put("payment", existingPayment);
+                System.out.println( existingPayment);
+                responseBody.put("paymentCode", existingPayment.getPaymentCode());
+                responseBody.put("amount", existingPayment.getAmount());
                 responseBody.put("qrUrl", buildSepayQrUrl(existingPayment));
 
                 writeJson(resp, 200, responseBody);
@@ -130,21 +133,19 @@ public class PaymentServlet extends HttpServlet {
 
             payment.setOrder(order);
             payment.setMethod(PaymentMethod.BANK_TRANSFER);
-            payment.setAmount(order.getTotalAmount());
+            //// SUA SAU OKE
+            payment.setAmount(new BigDecimal("4000"));
             payment.setPaidAt(null);
-            payment.setStatus(PaymentStatus.PENDING);
             payment.setPaymentCode(generatePaymentCode());
 
             paymentDAO.save(payment);
 
             Map<String, Object> response = new LinkedHashMap<>();
 
-            response.put("id", payment.getId());
             response.put("paymentCode", payment.getPaymentCode());
             response.put("amount", payment.getAmount());
-            response.put("status", payment.getStatus());
-            response.put("paidAt", payment.getPaidAt());
             response.put("qrUrl", buildSepayQrUrl(payment));
+            System.out.println(response);
 
             writeJson(resp, 200, response);
 
@@ -169,7 +170,7 @@ public class PaymentServlet extends HttpServlet {
             Map<String, Object> body = objectMapper.readValue(req.getInputStream(), new TypeReference<>() {});
             BigDecimal transferAmount = parseBigDecimal(body.get("transferAmount"));
             String content = body.get("content") == null ? null : body.get("content").toString();
-            String paymentCode = extractPaymentCode(content);
+            String paymentCode = content;
 
             if (transferAmount == null || paymentCode == null) {
                 writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid webhook payload");
@@ -183,7 +184,6 @@ public class PaymentServlet extends HttpServlet {
             }
 
             payment.setPaidAt(LocalDateTime.now());
-            payment.setStatus(PaymentStatus.SUCCESS);
             paymentDAO.update(payment);
 
             Order order = orderDAO.findById(payment.getOrder().getId());
@@ -192,7 +192,7 @@ public class PaymentServlet extends HttpServlet {
                 return;
             }
 
-            order.setStatus(OrderStatus.PROCESSING);
+            order.setStatus(OrderStatus.CONFIRMED);
             orderDAO.update(order);
 
             writeJson(resp, HttpServletResponse.SC_OK, Map.of("success", true));
@@ -236,7 +236,7 @@ public class PaymentServlet extends HttpServlet {
     }
 
     private String buildSepayQrUrl(Payment payment) {
-        String bankId = getEnv("BANK_ID", "MBBank");
+        String bankId = getEnv("BANK_ID", "BIDV");
         String bankAccount = getEnv("BANK_ACCOUNT", "0123456789");
 
         return "https://qr.sepay.vn/img"

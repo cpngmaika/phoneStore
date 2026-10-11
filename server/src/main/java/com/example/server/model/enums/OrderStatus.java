@@ -2,9 +2,9 @@ package com.example.server.model.enums;
 
 public enum OrderStatus {
     PENDING,
+    CONFIRMED,
     PROCESSING,
-    SHIPPED,
+    SHIPPING,
     DELIVERED,
-    CANCELLED,
-    REFUNDED
+    CANCELED
 }

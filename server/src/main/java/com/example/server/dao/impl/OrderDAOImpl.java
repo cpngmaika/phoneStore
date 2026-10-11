@@ -1,6 +1,7 @@
 package com.example.server.dao.impl;
 
 import com.example.server.model.Order;
+import jakarta.persistence.criteria.JoinType;
 import com.example.server.util.DBConnection;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -39,6 +40,26 @@ public class OrderDAOImpl {
             }
         }
     }
+    public List<Order> findAllWithAmount() {
+        EntityManager em = DBConnection.getEntityManager();
+
+        try {
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery<Order> cq = cb.createQuery(Order.class);
+
+            Root<Order> order = cq.from(Order.class);
+
+            order.fetch("payments", JoinType.LEFT);
+
+            cq.select(order).distinct(true);
+
+            return em.createQuery(cq).getResultList();
+
+        } finally {
+            em.close();
+        }
+    }
+
 
     public Order findByOrderCode(String orderCode) {
         EntityManager em = DBConnection.getEntityManager();
