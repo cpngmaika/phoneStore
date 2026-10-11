@@ -23,7 +23,12 @@
         <class>com.example.server.model.ProductImage</class>
         <class>com.example.server.model.ProductReview</class>
         <class>com.example.server.model.Cart</class>
+<<<<<<< HEAD
+        <class>com.example.server.model.LineItem</class>
+        <class>com.example.server.model.Product</class>
+=======
         <class>com.example.server.model.CartItem</class>
+>>>>>>> origin/main
         <class>com.example.server.model.Order</class>
         <class>com.example.server.model.OrderItem</class>
         <class>com.example.server.model.Payment</class>
