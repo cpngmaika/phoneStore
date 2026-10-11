@@ -1,4 +1,12 @@
+
 package com.example.server.dao.impl;
 
-public class OrderDAOImpl {
+import com.example.server.dao.GenericDAO;
+import com.example.server.model.Order;
+
+public class OrderDAOImpl extends GenericDAO<Order> {
+
+    public OrderDAOImpl() {
+        super(Order.class);
+    }
 }

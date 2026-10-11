@@ -12,6 +12,7 @@
         <class>com.example.server.model.Address</class>
         <class>com.example.server.model.Cart</class>
         <class>com.example.server.model.LineItem</class>
+        <class>com.example.server.model.Product</class>
         <class>com.example.server.model.Order</class>
         <class>com.example.server.model.Payment</class>
         <class>com.example.server.model.Coupon</class>
