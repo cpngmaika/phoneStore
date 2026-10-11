@@ -1,16 +1,11 @@
 package com.example.server.dao;
 
 import com.example.server.model.ProductReview;
-
 import java.util.List;
+import java.util.Optional;
 
-public class ProductReviewDao extends BaseDao<ProductReview, Long> {
-
-    public ProductReviewDao() {
-        super(ProductReview.class);
-    }
-
-    public List<ProductReview> findByProductId(Long productId) {
-        return List.of();
-    }
+public interface ProductReviewDao extends GenericDao<ProductReview, Long> {
+    Optional<ProductReview> findOptionalById(Long id);
+    List<ProductReview> findByProductId(Long productId);
+    boolean deleteById(Long id);
 }

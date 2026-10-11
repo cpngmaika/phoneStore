@@ -8,7 +8,7 @@ import jakarta.persistence.TypedQuery;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class BaseDao<T, ID> implements GenericDAO<T, ID> {
+public abstract class BaseDao<T, ID> implements GenericDao<T, ID> {
 
     private final Class<T> entityClass;
 

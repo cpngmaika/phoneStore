@@ -1,4 +1,4 @@
 package com.example.server.dao.impl;
 
-public class OrderDAOImpl {
+public class PaymentDaoImpl {
 }

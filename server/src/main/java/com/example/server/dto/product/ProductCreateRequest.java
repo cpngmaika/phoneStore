@@ -4,6 +4,7 @@ import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class ProductCreateRequest {
     private String sku;
@@ -14,71 +15,35 @@ public class ProductCreateRequest {
     private ProductStatus status;
     private Long brandId;
     private Long warrantyPolicyId;
+    private List<String> imageUrls; // Danh sách URL hình ảnh sản phẩm gửi từ FE
 
     public ProductCreateRequest() {
     }
 
-    public String getSku() {
-        return sku;
-    }
+    public String getSku() { return sku; }
+    public void setSku(String sku) { this.sku = sku; }
 
-    public void setSku(String sku) {
-        this.sku = sku;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 
-    public String getDescription() {
-        return description;
-    }
+    public Category getCategory() { return category; }
+    public void setCategory(Category category) { this.category = category; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public ProductStatus getStatus() { return status; }
+    public void setStatus(ProductStatus status) { this.status = status; }
 
-    public BigDecimal getPrice() {
-        return price;
-    }
+    public Long getBrandId() { return brandId; }
+    public void setBrandId(Long brandId) { this.brandId = brandId; }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
+    public Long getWarrantyPolicyId() { return warrantyPolicyId; }
+    public void setWarrantyPolicyId(Long warrantyPolicyId) { this.warrantyPolicyId = warrantyPolicyId; }
 
-    public Category getCategory() {
-        return category;
-    }
-
-    public void setCategory(Category category) {
-        this.category = category;
-    }
-
-    public ProductStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ProductStatus status) {
-        this.status = status;
-    }
-
-    public Long getBrandId() {
-        return brandId;
-    }
-
-    public void setBrandId(Long brandId) {
-        this.brandId = brandId;
-    }
-
-    public Long getWarrantyPolicyId() {
-        return warrantyPolicyId;
-    }
-
-    public void setWarrantyPolicyId(Long warrantyPolicyId) {
-        this.warrantyPolicyId = warrantyPolicyId;
-    }
+    public List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
 }
