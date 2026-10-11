@@ -2,7 +2,7 @@ package com.example.server.dao;
 
 import java.util.List;
 
-public interface GenericDAO<T, ID> {
+public interface GenericDao<T, ID> {
 
     T findById(ID id);
 

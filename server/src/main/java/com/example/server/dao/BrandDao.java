@@ -1,10 +1,9 @@
 package com.example.server.dao;
 
 import com.example.server.model.Brand;
+import java.util.Optional;
 
-public class BrandDao extends BaseDao<Brand, Long> {
-
-    public BrandDao() {
-        super(Brand.class);
-    }
+public interface BrandDao extends GenericDao<Brand, Long> {
+    Optional<Brand> findOptionalById(Long id);
+    boolean deleteById(Long id);
 }

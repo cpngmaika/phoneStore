@@ -1,0 +1,121 @@
+package com.example.server.service;
+
+import com.example.server.dao.BrandDao;
+import com.example.server.dao.ProductDao;
+import com.example.server.dao.WarrantyPolicyDao;
+import com.example.server.dao.impl.BrandDaoImpl;
+import com.example.server.dao.impl.ProductDaoImpl;
+import com.example.server.dto.product.ProductCreateRequest;
+import com.example.server.dto.product.ProductResponse;
+import com.example.server.exception.AppException;
+import com.example.server.model.Brand;
+import com.example.server.model.Product;
+import com.example.server.model.SmartPhone;
+import com.example.server.model.WarrantyPolicy;
+import com.example.server.model.enums.Category;
+import com.example.server.model.enums.ProductStatus;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class ProductService {
+    private final ProductDao productDao = new ProductDaoImpl();
+    private final BrandDao brandDao = new BrandDaoImpl();    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
+
+    public List<ProductResponse> getAllProducts() {
+        return productDao.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
+    public ProductResponse getProductById(Long id) {
+        Product product = productDao.findOptionalById(id)
+                .orElseThrow(() -> new AppException("Product not found with id: " + id));
+        return convertToResponse(product);
+    }
+
+    public List<ProductResponse> searchProducts(String keyword, Category category, Long brandId, BigDecimal minPrice, BigDecimal maxPrice) {
+        return productDao.search(keyword, category, brandId, minPrice, maxPrice).stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public ProductResponse createProduct(ProductCreateRequest request) {
+        if (request.getSku() != null && productDao.findBySku(request.getSku()).isPresent()) {
+            throw new AppException("Product with SKU already exists: " + request.getSku());
+        }
+
+        Brand brand = brandDao.findById(request.getBrandId());
+        if (brand == null) {
+            throw new AppException("Brand not found with id: " + request.getBrandId());
+        }
+
+        WarrantyPolicy warrantyPolicy = null;
+        if (request.getWarrantyPolicyId() != null) {
+            warrantyPolicy = warrantyPolicyDao.findById(request.getWarrantyPolicyId());
+        }
+
+        SmartPhone product = new SmartPhone(
+                request.getSku(),
+                request.getName(),
+                request.getDescription(),
+                request.getPrice(),
+                request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                brand,
+                warrantyPolicy,
+                "Default Chipset", 128, BigDecimal.valueOf(6.1), "OLED", 4000, 48, "iOS", "Black", true
+        );
+
+        productDao.save(product);
+        return convertToResponse(product);
+    }
+
+    public ProductResponse updateProduct(Long id, ProductCreateRequest request) {
+        Product product = productDao.findOptionalById(id)
+                .orElseThrow(() -> new AppException("Product not found with id: " + id));
+
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setCategory(request.getCategory());
+        product.setStatus(request.getStatus());
+
+        if (request.getBrandId() != null) {
+            Brand brand = brandDao.findById(request.getBrandId());
+            if (brand != null) product.setBrand(brand);
+        }
+
+        productDao.update(product);
+        return convertToResponse(product);
+    }
+
+    public void deleteProduct(Long id) {
+        if (productDao.findOptionalById(id).isEmpty()) {
+            throw new AppException("Product not found with id: " + id);
+        }
+        if (productDao.hasReferences(id)) {
+            throw new AppException(
+                    "Cannot delete this product because it is referenced by an order, cart, or review. "
+                            + "Set its status to DISCONTINUED instead."
+            );
+        }
+
+        boolean deleted = productDao.deleteById(id);
+        if (!deleted) {
+            throw new AppException("Product not found with id: " + id);
+        }
+    }
+
+    private ProductResponse convertToResponse(Product product) {
+        ProductResponse res = new ProductResponse();
+        res.setId(product.getId());
+        res.setSku(product.getSku());
+        res.setName(product.getName());
+        res.setDescription(product.getDescription());
+        res.setPrice(product.getPrice());
+        res.setCategory(product.getCategory());
+        res.setStatus(product.getStatus());
+        res.setBrandName(product.getBrand() != null ? product.getBrand().getName() : null);
+        res.setImageUrls(product.getImages().stream().map(img -> img.getImageUrl()).collect(Collectors.toList()));
+        return res;
+    }
+}
