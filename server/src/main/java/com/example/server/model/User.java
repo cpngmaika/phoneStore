@@ -2,6 +2,7 @@ package com.example.server.model;
 
 import com.example.server.model.enums.Role;
 import com.example.server.model.enums.UserStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class User {
     @Column(name = "email", nullable = false, length = 255)
     private String email;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -46,6 +48,7 @@ public class User {
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
 
+    @JsonIgnore
     @OneToMany(
             mappedBy = "user",
             cascade = CascadeType.ALL,
@@ -53,6 +56,7 @@ public class User {
     )
     private List<Address> addresses = new ArrayList<>();
 
+    @JsonIgnore
     @OneToOne(
             mappedBy = "user",
             cascade = CascadeType.ALL,
@@ -60,9 +64,11 @@ public class User {
     )
     private Cart cart;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Order> orders = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "reviewer")
     private List<ProductReview> reviews = new ArrayList<>();
 
