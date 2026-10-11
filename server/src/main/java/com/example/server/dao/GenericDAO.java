@@ -1,6 +1,7 @@
 
 package com.example.server.dao;
 
+<<<<<<< HEAD
 import com.example.server.config.HibernateConfig;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -107,3 +108,19 @@ public class GenericDAO<T> {
         }
     }
 }
+=======
+import java.util.List;
+
+public interface GenericDAO<T, ID> {
+
+    T findById(ID id);
+
+    List<T> findAll();
+
+    T save(T entity);
+
+    T update(T entity);
+
+    void delete(T entity);
+}
+>>>>>>> origin/main
