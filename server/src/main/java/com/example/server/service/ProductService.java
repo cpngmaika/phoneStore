@@ -5,6 +5,7 @@ import com.example.server.dao.ProductDao;
 import com.example.server.dao.WarrantyPolicyDao;
 import com.example.server.dao.impl.BrandDaoImpl;
 import com.example.server.dao.impl.ProductDaoImpl;
+import com.example.server.dao.impl.WarrantyPolicyDaoImpl;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
 import com.example.server.exception.AppException;
@@ -19,8 +20,7 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductDao productDao = new ProductDaoImpl();
     private final BrandDao brandDao = new BrandDaoImpl();
-    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
-
+    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDaoImpl();
     public List<ProductResponse> getAllProducts() {
         return productDao.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
     }
@@ -52,20 +52,70 @@ public class ProductService {
             warrantyPolicy = warrantyPolicyDao.findById(request.getWarrantyPolicyId());
         }
 
-        SmartPhone product = new SmartPhone(
-                request.getSku(),
-                request.getName(),
-                request.getDescription(),
-                request.getPrice(),
-                request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
-                brand,
-                warrantyPolicy,
-                "Default Chipset", 128, BigDecimal.valueOf(6.1), "OLED", 4000, 48, "iOS", "Black", true
-        );
+        Category category = request.getCategory() != null ? request.getCategory() : Category.SMARTPHONE;
+        Product product;
 
-        if (request.getCategory() != null) {
-            product.setCategory(request.getCategory());
+        switch (category) {
+            case TABLET:
+                product = new Tablet(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, "Default Chipset", 128, BigDecimal.valueOf(10.1),
+                        7000, "Android / iPadOS", "Silver", false
+                );
+                break;
+
+            case EARPHONE:
+                product = new Earphone(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, "Bluetooth", true, BigDecimal.valueOf(24)
+                );
+                break;
+
+            case CHARGER:
+                product = new Charger(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, BigDecimal.valueOf(20), "Type-C", "PD"
+                );
+                break;
+
+            case CABLE:
+                product = new Cable(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, BigDecimal.valueOf(1), "Type-C", "Type-C"
+                );
+                break;
+
+            case CASE:
+                product = new Case(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, "Silicone", "Black", "General"
+                );
+                break;
+
+            case SMARTPHONE:
+            default:
+                product = new SmartPhone(
+                        request.getSku(), request.getName(), request.getDescription(),
+                        request.getPrice(), request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK,
+                        brand, warrantyPolicy, "Default Chipset", 128, BigDecimal.valueOf(6.1),
+                        "OLED", 4000, 48, "iOS / Android", "Black", true
+                );
+                break;
         }
+// Gán các thông tin chung cho sản phẩm
+        product.setSku(request.getSku());
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setCategory(category);
+        product.setStatus(request.getStatus() != null ? request.getStatus() : ProductStatus.IN_STOCK);
+        product.setBrand(brand);
+        product.setWarrantyPolicy(warrantyPolicy);
 
         // Xử lý ánh xạ danh sách imageUrls sang ProductImage
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {

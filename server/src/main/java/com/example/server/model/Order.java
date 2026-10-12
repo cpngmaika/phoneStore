@@ -2,175 +2,82 @@ package com.example.server.model;
 
 import com.example.server.model.enums.OrderStatus;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-        name = "orders",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_orders_order_code",
-                        columnNames = "order_code"
-                )
-        }
-)
+@Table(name = "orders")
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_code", nullable = false, length = 50)
-    private String orderCode;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_orders_user")
-    )
-    private User user;
-
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<OrderItem> items = new ArrayList<>();
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "shipping_address_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_orders_shipping_address")
-    )
-    private Address shippingAddress;
-
-    @Column(
-            name = "shipping_fee",
-            nullable = false,
-            precision = 15,
-            scale = 2
-    )
-    private BigDecimal shippingFee = BigDecimal.ZERO;
+    @Column(name = "order_number", nullable = false, unique = true, length = 50)
+    private String orderNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
 
+    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(name = "order_date", nullable = false)
+    private LocalDateTime orderDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "coupon_id",
-            foreignKey = @ForeignKey(name = "fk_orders_coupon")
-    )
-    private Coupon coupon;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @OneToOne(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private Payment payment;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LineItem> items = new ArrayList<>();
 
-    protected Order() {
+    public Order() {
     }
 
-    public Order(
-            String orderCode,
-            User user,
-            Address shippingAddress
-    ) {
-        this.orderCode = orderCode;
+    public Order(String orderNumber, User user) {
+        this.orderNumber = orderNumber;
         this.user = user;
-        this.shippingAddress = shippingAddress;
-        this.status = OrderStatus.PENDING;
-        this.shippingFee = BigDecimal.ZERO;
+        this.orderDate = LocalDateTime.now();
     }
 
-    public Boolean applyCoupon(Coupon coupon) {
-        if (coupon == null) {
-            return false;
-        }
-
-        this.coupon = coupon;
-        return true;
+    // Các phương thức hỗ trợ quản lý danh sách sản phẩm trong đơn hàng
+    public void addLineItem(LineItem item) {
+        items.add(item);
+        item.setOrder(this);
+        calculateTotal();
     }
 
-    public void confirm() {
-        this.status = OrderStatus.CONFIRMED;
+    public void removeLineItem(LineItem item) {
+        items.remove(item);
+        item.setOrder(null);
+        calculateTotal();
     }
 
-    public void cancel() {
-        this.status = OrderStatus.CANCELLED;
+    public void calculateTotal() {
+        this.totalAmount = items.stream()
+                .map(LineItem::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public BigDecimal calculateTotal() {
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (OrderItem item : items) {
-            total = total.add(
-                    item.getProduct()
-                            .getPrice()
-                            .multiply(
-                                    BigDecimal.valueOf(item.getQuantity())
-                            )
-            );
-        }
-
-        return total.add(shippingFee);
-    }
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
 
-    public String getOrderCode() {
-        return orderCode;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setOrderCode(String orderCode) {
-        this.orderCode = orderCode;
+    public String getOrderNumber() {
+        return orderNumber;
     }
 
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public List<OrderItem> getItems() {
-        return items;
-    }
-
-    public void addItem(OrderItem item) {
-        items.add(item);
-        item.setOrder(this);
-    }
-
-    public void removeItem(OrderItem item) {
-        items.remove(item);
-        item.setOrder(null);
-    }
-
-    public Address getShippingAddress() {
-        return shippingAddress;
-    }
-
-    public void setShippingAddress(Address shippingAddress) {
-        this.shippingAddress = shippingAddress;
-    }
-
-    public BigDecimal getShippingFee() {
-        return shippingFee;
-    }
-
-    public void setShippingFee(BigDecimal shippingFee) {
-        this.shippingFee = shippingFee;
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
     }
 
     public OrderStatus getStatus() {
@@ -181,15 +88,35 @@ public class Order {
         this.status = status;
     }
 
-    public Coupon getCoupon() {
-        return coupon;
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
     }
 
-    public Payment getPayment() {
-        return payment;
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
-    public void setPayment(Payment payment) {
-        this.payment = payment;
+    public LocalDateTime getOrderDate() {
+        return orderDate;
+    }
+
+    public void setOrderDate(LocalDateTime orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public List<LineItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<LineItem> items) {
+        this.items = items;
     }
 }
