@@ -6,6 +6,7 @@ import com.example.server.dto.user.AddressRequest;
 import com.example.server.dto.user.UpdateProfileRequest;
 import com.example.server.model.Address;
 import com.example.server.model.User;
+import com.example.server.service.AddressService;
 import com.example.server.service.UserService;
 import com.example.server.util.JsonUtil;
 import com.example.server.util.SessionUtil;
@@ -21,6 +22,7 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/api/user/*", "/api/users/*"})
 public class UserServlet extends HttpServlet {
     private final UserService userService = new UserService();
+    private final AddressService addressService = new AddressService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -45,7 +47,7 @@ public class UserServlet extends HttpServlet {
             }
         } else if ("/addresses".equals(path)) {
             try {
-                List<Address> addresses = userService.getAddresses(currentUser.getId());
+                List<Address> addresses = addressService.getAddresses(currentUser.getId());
                 JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Get addresses successfully", addresses));
             } catch (Exception e) {
                 JsonUtil.sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ApiResponse.error(e.getMessage()));
@@ -98,7 +100,7 @@ public class UserServlet extends HttpServlet {
             case "/addresses":
                 try {
                     AddressRequest addrReq = JsonUtil.toObject(req, AddressRequest.class);
-                    Address newAddress = userService.addAddress(currentUser.getId(), addrReq);
+                    Address newAddress = addressService.addAddress(currentUser.getId(), addrReq);
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_CREATED, ApiResponse.ok("Address added successfully", newAddress));
                 } catch (IllegalArgumentException e) {
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
@@ -115,7 +117,7 @@ public class UserServlet extends HttpServlet {
                         break;
                     }
                     Long addressId = Long.parseLong(idParam);
-                    userService.deleteAddress(currentUser.getId(), addressId);
+                    addressService.deleteAddress(currentUser.getId(), addressId);
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Address deleted successfully", null));
                 } catch (IllegalArgumentException e) {
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
@@ -162,7 +164,7 @@ public class UserServlet extends HttpServlet {
                     return;
                 }
 
-                userService.deleteAddress(currentUser.getId(), addressId);
+                addressService.deleteAddress(currentUser.getId(), addressId);
                 JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Address deleted successfully", null));
             } catch (IllegalArgumentException e) {
                 JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
