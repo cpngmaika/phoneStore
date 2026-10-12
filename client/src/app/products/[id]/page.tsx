@@ -1,17 +1,56 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { ProductDetail } from "@/components/products/ProductDetail";
-import { getProductById, products } from "@/modules/products/product.service";
+import { getProductById } from "@/api/products.service";
+import { getReviewsByProduct } from "@/api/reviews.service";
+import type { Product, ProductReview } from "@/types/product.types";
 
-export function generateStaticParams() {
-  return products.map((product) => ({ id: product.id }));
-}
+export default function ProductDetailPage() {
+  const params = useParams<{ id: string }>();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function ProductDetailPage(props: PageProps<"/products/[id]">) {
-  const { id } = await props.params;
-  const product = getProductById(id);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getProductById(params.id), getReviewsByProduct(params.id)])
+      .then(([result, reviews]) => {
+        if (!cancelled) {
+          const productReviews: ProductReview[] = reviews
+            .filter((review) => !review.isHidden)
+            .map(({ rating, content }) => ({ rating, content }));
+          setProduct({ ...result, reviews: productReviews });
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Không tìm thấy sản phẩm.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
 
-  if (!product || product.status === "HIDDEN") {
-    notFound();
+  if (error) {
+    return (
+      <main className="mx-auto max-w-4xl px-5 py-16 text-center">
+        <p role="alert" className="text-red-700">{error}</p>
+        <Link href="/" className="mt-5 inline-block font-semibold text-primary">
+          Quay lại cửa hàng
+        </Link>
+      </main>
+    );
+  }
+
+  if (!product) {
+    return <main className="mx-auto max-w-7xl px-5 py-16 text-text-muted" role="status">Đang tải sản phẩm...</main>;
   }
 
   return <ProductDetail product={product} />;

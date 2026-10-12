@@ -1,5 +1,4 @@
-```java
-        package com.example.server.dao;
+package com.example.server.dao;
 
 import com.example.server.model.Coupon;
 import jakarta.persistence.EntityManager;
@@ -43,4 +42,3 @@ public class CouponDao extends BaseDao<Coupon, Long> {
         }
     }
 }
-```

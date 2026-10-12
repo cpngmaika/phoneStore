@@ -4,7 +4,10 @@ import com.example.server.dto.common.ApiResponse;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
 import com.example.server.model.enums.Category;
+import com.example.server.model.User;
+import com.example.server.model.enums.Role;
 import com.example.server.service.ProductService;
+import com.example.server.util.SessionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -67,6 +70,7 @@ public class ProductServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
+        if (!isAdmin(req, resp)) return;
         try {
             ProductCreateRequest request = objectMapper.readValue(req.getReader(), ProductCreateRequest.class);
             ProductResponse created = productService.createProduct(request);
@@ -81,6 +85,7 @@ public class ProductServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
+        if (!isAdmin(req, resp)) return;
         String pathInfo = req.getPathInfo();
         try {
             if (pathInfo == null || pathInfo.length() <= 1) {
@@ -99,6 +104,7 @@ public class ProductServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
+        if (!isAdmin(req, resp)) return;
         String pathInfo = req.getPathInfo();
         try {
             if (pathInfo == null || pathInfo.length() <= 1) {
@@ -111,5 +117,19 @@ public class ProductServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.error(e.getMessage())));
         }
+    }
+
+    private boolean isAdmin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User user = SessionUtil.getLoggedInUser(req);
+        if (user != null && user.getRole() == Role.ADMIN) {
+            return true;
+        }
+        resp.setStatus(user == null
+                ? HttpServletResponse.SC_UNAUTHORIZED
+                : HttpServletResponse.SC_FORBIDDEN);
+        resp.getWriter().write(objectMapper.writeValueAsString(
+                ApiResponse.error(user == null ? "Please login first" : "Admin role required")
+        ));
+        return false;
     }
 }

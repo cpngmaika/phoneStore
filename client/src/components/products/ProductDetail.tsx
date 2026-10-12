@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ProductSpecs } from "@/components/products/ProductSpecs";
-import { formatCurrency } from "@/modules/products/product.utils";
+import { formatCurrency } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
 
 export function ProductDetail({ product }: { product: Product }) {
@@ -10,9 +10,10 @@ export function ProductDetail({ product }: { product: Product }) {
     primaryImage,
     ...product.images.filter((image) => !image.isPrimary),
   ].filter(Boolean);
-  const rating =
-    product.reviews.reduce((sum, review) => sum + review.rating, 0) /
-    product.reviews.length;
+  const rating = product.reviews.length
+    ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+      product.reviews.length
+    : null;
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-12">
@@ -51,7 +52,13 @@ export function ProductDetail({ product }: { product: Product }) {
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium text-text-muted">
               <span>
-                <span className="text-star">★</span> {rating.toFixed(1)}
+                {rating === null ? (
+                  "No reviews yet"
+                ) : (
+                  <>
+                    <span className="text-star">★</span> {rating.toFixed(1)}
+                  </>
+                )}
               </span>
               <span>{product.reviews.length} reviews</span>
               <span>SKU {product.sku}</span>

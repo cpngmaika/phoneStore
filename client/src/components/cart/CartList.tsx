@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart } from "@/modules/cart/cart.hooks";
+import { useCart } from "@/hooks/cart.hooks";
 import { CartItem } from "@/components/cart/CartItem";
 
 export function CartList() {
