@@ -15,7 +15,6 @@
         <class>com.example.server.model.Product</class>
         <class>com.example.server.model.SmartPhone</class>
         <class>com.example.server.model.Tablet</class>
-        <class>com.example.server.model.Accessory</class>
         <class>com.example.server.model.Charger</class>
         <class>com.example.server.model.Cable</class>
         <class>com.example.server.model.Case</class>
@@ -23,9 +22,7 @@
         <class>com.example.server.model.ProductImage</class>
         <class>com.example.server.model.ProductReview</class>
         <class>com.example.server.model.Cart</class>
-        <class>com.example.server.model.CartItem</class>
         <class>com.example.server.model.Order</class>
-        <class>com.example.server.model.OrderItem</class>
         <class>com.example.server.model.Payment</class>
         <class>com.example.server.model.Coupon</class>
 
