@@ -3,24 +3,24 @@ package com.example.server.model;
 import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "chargers")
 @PrimaryKeyJoinColumn(name = "product_id")
-public class Charger extends Accessory {
+public class Charger extends Product {
 
-    @Column(name = "wattage_w", nullable = false)
-    private Integer wattageW;
+    @Column(name = "wattage", nullable = false, precision = 6, scale = 2)
+    private BigDecimal wattage;
 
-    @Column(name = "number_of_ports", nullable = false)
-    private Integer numberOfPorts;
+    @Column(name = "port_type", nullable = false, length = 100)
+    private String portType;
 
-    @Column(name = "connection_type", nullable = false, length = 100)
-    private String connectionType;
+    @Column(name = "fast_charging_tech", length = 100)
+    private String fastChargingTech;
 
     protected Charger() {
+        super();
     }
 
     public Charger(
@@ -31,62 +31,44 @@ public class Charger extends Accessory {
             ProductStatus status,
             Brand brand,
             WarrantyPolicy warrantyPolicy,
-            String compatibleWith,
-            String color,
-            Integer wattageW,
-            Integer numberOfPorts,
-            String connectionType
+            BigDecimal wattage,
+            String portType,
+            String fastChargingTech
     ) {
-        super(
-                sku,
-                name,
-                description,
-                price,
-                Category.CHARGER,
-                status,
-                brand,
-                warrantyPolicy,
-                compatibleWith,
-                color
-        );
-
-        this.wattageW = wattageW;
-        this.numberOfPorts = numberOfPorts;
-        this.connectionType = connectionType;
-    }
-
-    public boolean isFastCharge() {
-        return wattageW != null && wattageW >= 20;
+        super(sku, name, description, price, Category.CHARGER, status, brand, warrantyPolicy);
+        this.wattage = wattage;
+        this.portType = portType;
+        this.fastChargingTech = fastChargingTech;
     }
 
     @Override
     public String getSpecifications() {
-        return "Power: " + wattageW + "W"
-                + ", Ports: " + numberOfPorts
-                + ", Connection: " + connectionType;
+        return "Wattage: " + wattage + "W, Port: " + portType +
+                (fastChargingTech != null ? ", Tech: " + fastChargingTech : "");
     }
 
-    public Integer getWattageW() {
-        return wattageW;
+    // Getters and Setters
+    public BigDecimal getWattage() {
+        return wattage;
     }
 
-    public void setWattageW(Integer wattageW) {
-        this.wattageW = wattageW;
+    public void setWattage(BigDecimal wattage) {
+        this.wattage = wattage;
     }
 
-    public Integer getNumberOfPorts() {
-        return numberOfPorts;
+    public String getPortType() {
+        return portType;
     }
 
-    public void setNumberOfPorts(Integer numberOfPorts) {
-        this.numberOfPorts = numberOfPorts;
+    public void setPortType(String portType) {
+        this.portType = portType;
     }
 
-    public String getConnectionType() {
-        return connectionType;
+    public String getFastChargingTech() {
+        return fastChargingTech;
     }
 
-    public void setConnectionType(String connectionType) {
-        this.connectionType = connectionType;
+    public void setFastChargingTech(String fastChargingTech) {
+        this.fastChargingTech = fastChargingTech;
     }
 }

@@ -3,24 +3,24 @@ package com.example.server.model;
 import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cables")
 @PrimaryKeyJoinColumn(name = "product_id")
-public class Cable extends Accessory {
+public class Cable extends Product {
 
-    @Column(name = "length_meters", nullable = false, precision = 6, scale = 2)
+    @Column(name = "length_meters", nullable = false, precision = 4, scale = 2)
     private BigDecimal lengthMeters;
 
-    @Column(name = "connection_type", nullable = false, length = 100)
-    private String connectionType;
+    @Column(name = "connector_from", nullable = false, length = 50)
+    private String connectorFrom;
 
-    @Column(name = "material", nullable = false, length = 100)
-    private String material;
+    @Column(name = "connector_to", nullable = false, length = 50)
+    private String connectorTo;
 
     protected Cable() {
+        super();
     }
 
     public Cable(
@@ -31,37 +31,22 @@ public class Cable extends Accessory {
             ProductStatus status,
             Brand brand,
             WarrantyPolicy warrantyPolicy,
-            String compatibleWith,
-            String color,
             BigDecimal lengthMeters,
-            String connectionType,
-            String material
+            String connectorFrom,
+            String connectorTo
     ) {
-        super(
-                sku,
-                name,
-                description,
-                price,
-                Category.CABLE,
-                status,
-                brand,
-                warrantyPolicy,
-                compatibleWith,
-                color
-        );
-
+        super(sku, name, description, price, Category.CABLE, status, brand, warrantyPolicy);
         this.lengthMeters = lengthMeters;
-        this.connectionType = connectionType;
-        this.material = material;
+        this.connectorFrom = connectorFrom;
+        this.connectorTo = connectorTo;
     }
 
     @Override
     public String getSpecifications() {
-        return "Length: " + lengthMeters + "m"
-                + ", Connection: " + connectionType
-                + ", Material: " + material;
+        return "Length: " + lengthMeters + "m, Connector: " + connectorFrom + " to " + connectorTo;
     }
 
+    // Getters and Setters
     public BigDecimal getLengthMeters() {
         return lengthMeters;
     }
@@ -70,19 +55,19 @@ public class Cable extends Accessory {
         this.lengthMeters = lengthMeters;
     }
 
-    public String getConnectionType() {
-        return connectionType;
+    public String getConnectorFrom() {
+        return connectorFrom;
     }
 
-    public void setConnectionType(String connectionType) {
-        this.connectionType = connectionType;
+    public void setConnectorFrom(String connectorFrom) {
+        this.connectorFrom = connectorFrom;
     }
 
-    public String getMaterial() {
-        return material;
+    public String getConnectorTo() {
+        return connectorTo;
     }
 
-    public void setMaterial(String material) {
-        this.material = material;
+    public void setConnectorTo(String connectorTo) {
+        this.connectorTo = connectorTo;
     }
 }

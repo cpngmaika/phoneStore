@@ -3,9 +3,8 @@ package com.example.server.model.enums;
 public enum Category {
     SMARTPHONE,
     TABLET,
-    ACCESSORY,
+    EARPHONE,
     CHARGER,
     CABLE,
-    CASE,
-    EARPHONE
+    CASE
 }

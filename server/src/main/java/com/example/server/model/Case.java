@@ -3,24 +3,24 @@ package com.example.server.model;
 import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cases")
 @PrimaryKeyJoinColumn(name = "product_id")
-public class Case extends Accessory {
+public class Case extends Product {
 
     @Column(name = "material", nullable = false, length = 100)
     private String material;
 
-    @Column(name = "supports_magsafe", nullable = false)
-    private Boolean supportsMagSafe = false;
+    @Column(name = "color", nullable = false, length = 50)
+    private String color;
 
-    @Column(name = "is_shockproof", nullable = false)
-    private Boolean isShockproof = false;
+    @Column(name = "compatible_model", nullable = false, length = 100)
+    private String compatibleModel;
 
     protected Case() {
+        super();
     }
 
     public Case(
@@ -31,37 +31,22 @@ public class Case extends Accessory {
             ProductStatus status,
             Brand brand,
             WarrantyPolicy warrantyPolicy,
-            String compatibleWith,
-            String color,
             String material,
-            Boolean supportsMagSafe,
-            Boolean isShockproof
+            String color,
+            String compatibleModel
     ) {
-        super(
-                sku,
-                name,
-                description,
-                price,
-                Category.CASE,
-                status,
-                brand,
-                warrantyPolicy,
-                compatibleWith,
-                color
-        );
-
+        super(sku, name, description, price, Category.CASE, status, brand, warrantyPolicy);
         this.material = material;
-        this.supportsMagSafe = supportsMagSafe;
-        this.isShockproof = isShockproof;
+        this.color = color;
+        this.compatibleModel = compatibleModel;
     }
 
     @Override
     public String getSpecifications() {
-        return "Material: " + material
-                + ", MagSafe: " + supportsMagSafe
-                + ", Shockproof: " + isShockproof;
+        return "Material: " + material + ", Color: " + color + ", Compatible with: " + compatibleModel;
     }
 
+    // Getters and Setters
     public String getMaterial() {
         return material;
     }
@@ -70,19 +55,19 @@ public class Case extends Accessory {
         this.material = material;
     }
 
-    public Boolean getSupportsMagSafe() {
-        return supportsMagSafe;
+    public String getColor() {
+        return color;
     }
 
-    public void setSupportsMagSafe(Boolean supportsMagSafe) {
-        this.supportsMagSafe = supportsMagSafe;
+    public void setColor(String color) {
+        this.color = color;
     }
 
-    public Boolean getIsShockproof() {
-        return isShockproof;
+    public String getCompatibleModel() {
+        return compatibleModel;
     }
 
-    public void setIsShockproof(Boolean isShockproof) {
-        this.isShockproof = isShockproof;
+    public void setCompatibleModel(String compatibleModel) {
+        this.compatibleModel = compatibleModel;
     }
 }

@@ -3,13 +3,12 @@ package com.example.server.model;
 import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "earphones")
 @PrimaryKeyJoinColumn(name = "product_id")
-public class Earphone extends Accessory {
+public class Earphone extends Product {
 
     @Column(name = "connection_type", nullable = false, length = 100)
     private String connectionType;
@@ -21,6 +20,7 @@ public class Earphone extends Accessory {
     private BigDecimal batteryLifeHours;
 
     protected Earphone() {
+        super();
     }
 
     public Earphone(
@@ -31,42 +31,26 @@ public class Earphone extends Accessory {
             ProductStatus status,
             Brand brand,
             WarrantyPolicy warrantyPolicy,
-            String compatibleWith,
-            String color,
             String connectionType,
             Boolean hasANC,
             BigDecimal batteryLifeHours
     ) {
-        super(
-                sku,
-                name,
-                description,
-                price,
-                Category.EARPHONE,
-                status,
-                brand,
-                warrantyPolicy,
-                compatibleWith,
-                color
-        );
-
+        super(sku, name, description, price, Category.EARPHONE, status, brand, warrantyPolicy);
         this.connectionType = connectionType;
         this.hasANC = hasANC;
         this.batteryLifeHours = batteryLifeHours;
     }
 
     public boolean isWireless() {
-        return connectionType != null
-                && !connectionType.equalsIgnoreCase("WIRED");
+        return connectionType != null && !connectionType.equalsIgnoreCase("WIRED");
     }
 
     @Override
     public String getSpecifications() {
-        return "Connection: " + connectionType
-                + ", ANC: " + hasANC
-                + ", Battery: " + batteryLifeHours + " hours";
+        return "Connection: " + connectionType + ", ANC: " + (hasANC ? "Yes" : "No") + ", Battery: " + batteryLifeHours + " hours";
     }
 
+    // Getters and Setters
     public String getConnectionType() {
         return connectionType;
     }

@@ -1,7 +1,6 @@
 package com.example.server.model;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,41 +13,51 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            unique = true,
-            foreignKey = @ForeignKey(name = "fk_carts_user")
-    )
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @OneToMany(
-            mappedBy = "cart",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<CartItem> items = new ArrayList<>();
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LineItem> items = new ArrayList<>();
 
-    protected Cart() {
+    public Cart() {
     }
 
     public Cart(User user) {
         this.user = user;
     }
 
-    public BigDecimal getTotalAmount() {
-        BigDecimal total = BigDecimal.ZERO;
-        if (items != null) {
-            for (CartItem item : items) {
-                total = total.add(item.getSubtotal());
-            }
-        }
-        return total;
+    // Các phương thức hỗ trợ quản lý danh sách sản phẩm trong giỏ
+    public void addItem(LineItem item) {
+        items.add(item);
+        item.setCart(this);
     }
 
+    public void removeItem(LineItem item) {
+        items.remove(item);
+        item.setCart(null);
+    }
+
+    public void clearItems() {
+        for (LineItem item : items) {
+            item.setCart(null);
+        }
+        items.clear();
+    }
+
+    public BigDecimal getTotalAmount() {
+        return items.stream()
+                .map(LineItem::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Getters and Setters
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public User getUser() {
@@ -59,17 +68,11 @@ public class Cart {
         this.user = user;
     }
 
-    public List<CartItem> getItems() {
+    public List<LineItem> getItems() {
         return items;
     }
 
-    public void addItem(CartItem item) {
-        items.add(item);
-        item.setCart(this);
-    }
-
-    public void removeItem(CartItem item) {
-        items.remove(item);
-        item.setCart(null);
+    public void setItems(List<LineItem> items) {
+        this.items = items;
     }
 }

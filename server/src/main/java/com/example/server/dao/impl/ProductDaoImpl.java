@@ -59,10 +59,15 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
     public Optional<Product> findBySku(String sku) {
         EntityManager em = getEntityManager();
         try {
-            String jpql = "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE p.sku = :sku";
-            TypedQuery<Product> query = em.createQuery(jpql, Product.class);
-            query.setParameter("sku", sku);
-            return Optional.of(query.getSingleResult());
+            return Optional.of(
+                    em.createQuery(
+                "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
+                        + " WHERE p.sku = :sku",
+                        Product.class
+                )
+                .setParameter("sku", sku)
+                .getSingleResult()
+                    );
         } catch (NoResultException e) {
             return Optional.empty();
         } finally {
@@ -74,10 +79,13 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
     public List<Product> findByCategory(Category category) {
         EntityManager em = getEntityManager();
         try {
-            String jpql = "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE p.category = :category";
-            TypedQuery<Product> query = em.createQuery(jpql, Product.class);
-            query.setParameter("category", category);
-            return query.getResultList();
+            return em.createQuery(
+            "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
+                    + " WHERE p.category = :category",
+            Product.class
+            )
+            .setParameter("category", category)
+            .getResultList();
         } finally {
             em.close();
         }
@@ -87,25 +95,35 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
     public List<Product> findByBrandId(Long brandId) {
         EntityManager em = getEntityManager();
         try {
-            String jpql = "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE p.brand.id = :brandId";
-            TypedQuery<Product> query = em.createQuery(jpql, Product.class);
-            query.setParameter("brandId", brandId);
-            return query.getResultList();
+            return em.createQuery(
+                            "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
+                                    + " WHERE p.brand.id = :brandId",
+                            Product.class
+                    )
+                    .setParameter("brandId", brandId)
+                    .getResultList();
         } finally {
             em.close();
         }
     }
 
     @Override
-    public List<Product> search(String keyword, Category category, Long brandId, BigDecimal minPrice, BigDecimal maxPrice) {
+    public List<Product> search(
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
         EntityManager em = getEntityManager();
         try {
-            StringBuilder jpql = new StringBuilder("SELECT DISTINCT p")
-                    .append(PRODUCT_DETAILS_FROM)
-                    .append(" WHERE 1=1");
+            StringBuilder jpql = new StringBuilder(
+                    "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE 1=1"
+            );
 
             if (keyword != null && !keyword.trim().isEmpty()) {
-                jpql.append(" AND (LOWER(p.name) LIKE LOWER(:keyword) OR LOWER(p.sku) LIKE LOWER(:keyword))");
+                jpql.append(" AND (LOWER(p.name) LIKE LOWER(:keyword)"
+                        + " OR LOWER(p.sku) LIKE LOWER(:keyword))");
             }
             if (category != null) {
                 jpql.append(" AND p.category = :category");
@@ -120,7 +138,7 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
                 jpql.append(" AND p.price <= :maxPrice");
             }
 
-            TypedQuery<Product> query = em.createQuery(jpql.toString(), Product.class);
+            var query = em.createQuery(jpql.toString(), Product.class);
 
             if (keyword != null && !keyword.trim().isEmpty()) {
                 query.setParameter("keyword", "%" + keyword.trim() + "%");

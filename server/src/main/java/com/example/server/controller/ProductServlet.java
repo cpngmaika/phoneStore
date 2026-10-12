@@ -3,6 +3,7 @@ package com.example.server.controller;
 import com.example.server.dto.common.ApiResponse;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
+import com.example.server.model.enums.Category;
 import com.example.server.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -13,6 +14,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.math.BigDecimal;
 import java.io.IOException;
 import java.util.List;
 
@@ -33,8 +35,24 @@ public class ProductServlet extends HttpServlet {
 
         try {
             if (pathInfo == null || pathInfo.equals("/")) {
-                List<ProductResponse> products = productService.getAllProducts();
-                resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(products)));
+                String keyword = req.getParameter("keyword");
+                String categoryStr = req.getParameter("category");
+                String brandIdStr = req.getParameter("brandId");
+                String minPriceStr = req.getParameter("minPrice");
+                String maxPriceStr = req.getParameter("maxPrice");
+
+                if (keyword != null || categoryStr != null || brandIdStr != null || minPriceStr != null || maxPriceStr != null) {
+                    Category category = categoryStr != null && !categoryStr.isEmpty() ? Category.valueOf(categoryStr) : null;
+                    Long brandId = brandIdStr != null && !brandIdStr.isEmpty() ? Long.parseLong(brandIdStr) : null;
+                    BigDecimal minPrice = minPriceStr != null && !minPriceStr.isEmpty() ? new BigDecimal(minPriceStr) : null;
+                    BigDecimal maxPrice = maxPriceStr != null && !maxPriceStr.isEmpty() ? new BigDecimal(maxPriceStr) : null;
+
+                    List<ProductResponse> products = productService.searchProducts(keyword, category, brandId, minPrice, maxPrice);
+                    resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(products)));
+                } else {
+                    List<ProductResponse> products = productService.getAllProducts();
+                    resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(products)));
+                }
             } else {
                 Long id = Long.parseLong(pathInfo.substring(1));
                 ProductResponse product = productService.getProductById(id);
