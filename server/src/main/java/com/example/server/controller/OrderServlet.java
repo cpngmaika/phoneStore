@@ -1,4 +1,154 @@
 package com.example.server.controller;
 
-public class OrderServlet {
+import com.example.server.dao.ProductDao;
+import com.example.server.dao.impl.ProductDaoImpl;
+import com.example.server.dto.common.ApiResponse;
+import com.example.server.dto.order.OrderCreateRequest;
+import com.example.server.dto.order.OrderItemRequest;
+import com.example.server.dto.order.OrderItemResponse;
+import com.example.server.dto.order.OrderResponse;
+import com.example.server.model.LineItem;
+import com.example.server.model.Order;
+import com.example.server.model.Product;
+import com.example.server.model.User;
+import com.example.server.service.OrderService;
+import com.example.server.util.JsonUtil;
+import com.example.server.util.SessionUtil;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@WebServlet("/api/orders/*")
+public class OrderServlet extends HttpServlet {
+    private final OrderService orderService = new OrderService();
+    private final ProductDao productDao = new ProductDaoImpl();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = SessionUtil.getLoggedInUser(req);
+        if (user == null) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_UNAUTHORIZED,
+                    ApiResponse.error("Please login first"));
+            return;
+        }
+
+        String path = req.getPathInfo();
+        try {
+            if (path == null || "/".equals(path)) {
+                List<OrderResponse> orders = orderService
+                        .layDonHangTheoNguoiDung(user.getId())
+                        .stream()
+                        .map(OrderServlet::toResponse)
+                        .toList();
+                JsonUtil.sendJson(resp, HttpServletResponse.SC_OK,
+                        ApiResponse.success("Orders retrieved successfully", orders));
+                return;
+            }
+
+            Long orderId = parseOrderId(path);
+            Order order = orderService.timDonHangTheoId(orderId);
+            if (order == null || !user.getId().equals(order.getUser().getId())) {
+                JsonUtil.sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                        ApiResponse.error("Order not found"));
+                return;
+            }
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_OK,
+                    ApiResponse.success("Order retrieved successfully", toResponse(order)));
+        } catch (IllegalArgumentException e) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    ApiResponse.error("Unable to retrieve orders"));
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = SessionUtil.getLoggedInUser(req);
+        if (user == null) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_UNAUTHORIZED,
+                    ApiResponse.error("Please login first"));
+            return;
+        }
+
+        try {
+            OrderCreateRequest request = JsonUtil.toObject(req, OrderCreateRequest.class);
+            if (request.getItems() == null || request.getItems().isEmpty()) {
+                JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                        ApiResponse.error("Order must contain at least one item"));
+                return;
+            }
+
+            List<LineItem> items = new ArrayList<>();
+            for (OrderItemRequest item : request.getItems()) {
+                if (item == null || item.getProductId() == null
+                        || item.getQuantity() == null || item.getQuantity() <= 0) {
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                            ApiResponse.error("Order item is invalid"));
+                    return;
+                }
+
+                Optional<Product> product = productDao.findOptionalById(item.getProductId());
+                if (product.isEmpty()) {
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                            ApiResponse.error("Product not found: " + item.getProductId()));
+                    return;
+                }
+
+                items.add(new LineItem(product.get(), item.getQuantity(), product.get().getPrice()));
+            }
+
+            Order order = orderService.taoDonHang(
+                    user.getId(),
+                    items,
+                    request.getCouponCode()
+            );
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_CREATED,
+                    ApiResponse.success("Order created successfully", toResponse(order)));
+        } catch (IllegalArgumentException e) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            JsonUtil.sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    ApiResponse.error("Unable to create order"));
+        }
+    }
+
+    private static Long parseOrderId(String path) {
+        if (!path.matches("/\\d+")) {
+            throw new IllegalArgumentException("Invalid order ID");
+        }
+        return Long.parseLong(path.substring(1));
+    }
+
+    static OrderResponse toResponse(Order order) {
+        OrderResponse response = new OrderResponse();
+        response.setId(order.getId());
+        response.setOrderCode(order.getOrderNumber());
+        response.setStatus(order.getStatus());
+        response.setTotalAmount(order.getTotalAmount());
+        response.setCouponCode(order.getCoupon() == null ? null : order.getCoupon().getCode());
+
+        List<OrderItemResponse> items = order.getItems().stream().map(item -> {
+            OrderItemResponse itemResponse = new OrderItemResponse();
+            itemResponse.setProductId(item.getProduct().getId());
+            itemResponse.setProductName(item.getProduct().getName());
+            itemResponse.setQuantity(item.getQuantity());
+            itemResponse.setUnitPrice(item.getUnitPrice());
+            itemResponse.setSubtotal(item.getSubtotal());
+            return itemResponse;
+        }).toList();
+        response.setItems(items);
+        return response;
+    }
 }

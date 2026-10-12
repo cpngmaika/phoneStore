@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { formatCurrency } from "@/modules/products/product.utils";
-import { useCart } from "@/modules/cart/cart.hooks";
+import { formatCurrency } from "@/lib/product.utils";
+import { useCart } from "@/hooks/cart.hooks";
 import type { CartItem as CartItemData } from "@/types/cart.types";
 
 export function CartItem({ item }: { item: CartItemData }) {

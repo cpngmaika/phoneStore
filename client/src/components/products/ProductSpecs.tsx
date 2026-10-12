@@ -1,31 +1,38 @@
-import { titleCase } from "@/modules/products/product.utils";
+import { titleCase } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
 
 export function ProductSpecs({ product }: { product: Product }) {
-  const specs =
+  const specs: Array<[string, string | undefined]> =
     product.category === "SMARTPHONE" || product.category === "TABLET"
       ? [
           ["Chipset", product.chipset],
-          ["Storage", `${product.storageGb} GB`],
-          ["Screen", `${product.screenSize}"`],
-          ["Battery", `${product.batteryMah} mAh`],
+          ["Storage", product.storageGb === undefined ? undefined : `${product.storageGb} GB`],
+          ["Screen", product.screenSize === undefined ? undefined : `${product.screenSize}"`],
+          ["Battery", product.batteryMah === undefined ? undefined : `${product.batteryMah} mAh`],
           ["OS", product.os],
           ["Color", product.color],
         ]
       : product.category === "EARPHONE"
         ? [
             ["Connection", product.connectionType],
-            ["ANC", product.hasANC ? "Yes" : "No"],
-            ["Battery life", `${product.batteryLifeHours} hours`],
-            ["Wireless", product.isWireless ? "Yes" : "No"],
+            ["ANC", product.hasANC === undefined ? undefined : product.hasANC ? "Yes" : "No"],
+            ["Battery life", product.batteryLifeHours === undefined ? undefined : `${product.batteryLifeHours} hours`],
+            ["Wireless", product.isWireless === undefined ? undefined : product.isWireless ? "Yes" : "No"],
           ]
         : "lengthMeters" in product
           ? [
-              ["Length", product.lengthMeters ? `${product.lengthMeters} m` : "Wall plug"],
-              ["Wattage", `${product.wattageW} W`],
-              ["Fast charge", product.isFastCharge ? "Yes" : "No"],
+              ["Length", product.lengthMeters === undefined ? undefined : product.lengthMeters ? `${product.lengthMeters} m` : "Wall plug"],
+              ["Wattage", product.wattageW === undefined ? undefined : `${product.wattageW} W`],
+              ["Fast charge", product.isFastCharge === undefined ? undefined : product.isFastCharge ? "Yes" : "No"],
             ]
           : [];
+  const availableSpecs = specs.filter(
+    (spec): spec is [string, string] => Boolean(spec[1]),
+  );
+
+  if (availableSpecs.length === 0) {
+    return null;
+  }
 
   return (
     <div className="rounded-lg border border-border bg-surface p-5">
@@ -36,7 +43,7 @@ export function ProductSpecs({ product }: { product: Product }) {
         </span>
       </div>
       <dl className="grid gap-3 sm:grid-cols-2">
-        {specs.map(([label, value]) => (
+        {availableSpecs.map(([label, value]) => (
           <div key={label} className="rounded-lg bg-surface-muted p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-text-muted">
               {label}

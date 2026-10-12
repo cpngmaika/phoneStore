@@ -5,7 +5,6 @@ import com.example.server.dao.CouponDao;
 import com.example.server.model.Coupon;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -34,27 +33,24 @@ public class CouponService {
             throw new IllegalArgumentException("Giá trị đơn hàng không hợp lệ.");
         }
 
-        Optional<Coupon> optionalCoupon = couponDao.findByCode(code);
-
-        if (optionalCoupon.isEmpty()) {
+        Coupon coupon = couponDao.findByCode(code);
+        if (coupon == null) {
             throw new IllegalArgumentException("Mã giảm giá không tồn tại.");
         }
 
-        Coupon coupon = optionalCoupon.get();
-
-        if (!coupon.isValidAt(LocalDateTime.now())) {
+        if (!coupon.isValid(orderAmount)) {
             throw new IllegalArgumentException(
                     "Mã giảm giá không còn hiệu lực hoặc đã hết lượt sử dụng."
             );
         }
 
-        return coupon.tinhTienGiam(orderAmount);
+        return coupon.calculateDiscount(orderAmount);
     }
 
     /**
      * Tìm mã giảm giá theo code.
      */
     public Optional<Coupon> findByCode(String code) {
-        return couponDao.findByCode(code);
+        return Optional.ofNullable(couponDao.findByCode(code));
     }
 }

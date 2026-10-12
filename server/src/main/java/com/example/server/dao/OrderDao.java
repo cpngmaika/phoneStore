@@ -1,5 +1,4 @@
-```java
-        package com.example.server.dao;
+package com.example.server.dao;
 
 import com.example.server.model.Order;
 import jakarta.persistence.EntityManager;
@@ -107,4 +106,3 @@ public class OrderDao extends BaseDao<Order, Long> {
         }
     }
 }
-```
