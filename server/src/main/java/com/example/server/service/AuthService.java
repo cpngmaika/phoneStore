@@ -1,6 +1,7 @@
 package com.example.server.service;
 
 import com.example.server.dao.UserDao;
+import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.auth.LoginRequest;
 import com.example.server.dto.auth.RegisterRequest;
 import com.example.server.model.User;
@@ -14,7 +15,7 @@ public class AuthService {
     private final UserDao userDao;
 
     public AuthService() {
-        this.userDao = new UserDao();
+        this.userDao = new UserDaoImpl();
     }
 
     public AuthService(UserDao userDao) {

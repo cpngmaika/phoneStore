@@ -2,6 +2,7 @@ package com.example.server.service;
 
 import com.example.server.dao.AddressDao;
 import com.example.server.dao.UserDao;
+import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.auth.ChangePasswordRequest;
 import com.example.server.dto.user.AddressRequest;
 import com.example.server.dto.user.UpdateProfileRequest;
@@ -21,15 +22,18 @@ import java.util.Optional;
 public class UserService {
     private final UserDao userDao;
     private final AddressDao addressDao;
+    private final AddressService addressService;
 
     public UserService(UserDao userDao, AddressDao addressDao) {
         this.userDao = userDao;
         this.addressDao = addressDao;
+        this.addressService = new AddressService(addressDao, userDao);
     }
 
     public UserService() {
-        this.userDao = new UserDao();
+        this.userDao = new UserDaoImpl();
         this.addressDao = new AddressDao();
+        this.addressService = new AddressService(this.addressDao, this.userDao);
     }
 
     public User getProfile(Long userId) {
@@ -75,49 +79,16 @@ public class UserService {
     }
 
     // Address Part
-
     public List<Address> getAddresses(Long userId) {
-        return addressDao.findByUserId(userId);
+        return addressService.getAddresses(userId);
     }
 
     public Address addAddress(Long userId, AddressRequest req) {
-        User user = getProfile(userId);
-
-        Address address = new Address(
-                user,
-                req.getReceiverName(),
-                req.getReceiverPhone(),
-                req.getCountry(),
-                req.getProvince(),
-                req.getDistrict(),
-                req.getWard(),
-                req.getStreetDetail(),
-                req.getIsDefault() != null && req.getIsDefault()
-        );
-
-        Address saved = addressDao.save(address);
-        if (saved == null) {
-            throw new RuntimeException("Add address failed");
-        }
-        return saved;
+        return addressService.addAddress(userId, req);
     }
 
     public boolean deleteAddress(Long userId, Long addressId) {
-        Address address = addressDao.findById(addressId);
-        if (address == null) {
-            throw new IllegalArgumentException("Address not found");
-        }
-
-        // Security: Identify the User who wants to delete address
-        if (!address.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Access denied: Not your address");
-        }
-
-        boolean deleted = addressDao.deleteById(addressId);
-        if (!deleted) {
-            throw new RuntimeException("Delete address failed");
-        }
-        return true;
+        return addressService.deleteAddress(userId, addressId);
     }
 
     // ==========================================

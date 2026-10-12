@@ -5,6 +5,7 @@ import com.example.server.dao.ProductReviewDao;
 import com.example.server.dao.UserDao;
 import com.example.server.dao.impl.ProductDaoImpl;
 import com.example.server.dao.impl.ProductReviewDaoImpl;
+import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.review.ReviewCreateRequest;
 import com.example.server.dto.review.ReviewResponse;
 import com.example.server.exception.AppException;
@@ -18,7 +19,7 @@ import java.util.stream.Collectors;
 public class ReviewService {
     private final ProductReviewDao reviewDao = new ProductReviewDaoImpl();
     private final ProductDao productDao = new ProductDaoImpl();
-    private final UserDao userDao = new UserDao();
+    private final UserDao userDao = new UserDaoImpl();
 
     public List<ReviewResponse> getReviewsByProduct(Long productId) {
         return reviewDao.findByProductId(productId).stream()
