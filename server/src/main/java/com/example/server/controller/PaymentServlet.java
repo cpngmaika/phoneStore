@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 
 @WebServlet("/api/payment/*")
 public class PaymentServlet extends HttpServlet {
-    private static final Pattern PAYMENT_CODE_PATTERN = Pattern.compile("PAY-[A-Za-z0-9]{8}");
+    private static final Pattern PAYMENT_CODE_PATTERN = Pattern.compile("PAY[A-Za-z0-9]{8}");
 
     private final OrderDAOImpl orderDAO = new OrderDAOImpl();
     private final PaymentDAOImpl paymentDAO = new PaymentDAOImpl();
@@ -170,7 +170,7 @@ public class PaymentServlet extends HttpServlet {
             Map<String, Object> body = objectMapper.readValue(req.getInputStream(), new TypeReference<>() {});
             BigDecimal transferAmount = parseBigDecimal(body.get("transferAmount"));
             String content = body.get("content") == null ? null : body.get("content").toString();
-            String paymentCode = content;
+            String paymentCode = extractPaymentCode(content);
 
             if (transferAmount == null || paymentCode == null) {
                 writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid webhook payload");
@@ -228,7 +228,7 @@ public class PaymentServlet extends HttpServlet {
     }
 
     private String generatePaymentCode() {
-        return "PAY-" + UUID.randomUUID()
+        return "PAY" + UUID.randomUUID()
                 .toString()
                 .replace("-", "")
                 .substring(0, 8)
