@@ -1,13 +1,22 @@
 package com.example.server.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 public class AddressRequest {
+    @JsonAlias({"recipientName", "receiverName"})
     private String receiverName;
+
+    @JsonAlias({"phone", "receiverPhone"})
     private String receiverPhone;
-    private String country;
+
+    private String country = "Vietnam";
     private String province;
     private String district;
     private String ward;
+
+    @JsonAlias({"streetAddress", "streetDetail"})
     private String streetDetail;
+
     private Boolean isDefault;
 
     public AddressRequest() {

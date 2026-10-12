@@ -78,6 +78,8 @@ public class UserServlet extends HttpServlet {
                     User updatedUser = userService.updateProfile(currentUser.getId(), updateReq);
                     SessionUtil.setLoggedInUser(req, updatedUser);
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Update profile successfully", updatedUser));
+                } catch (IllegalArgumentException e) {
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
                 } catch (Exception e) {
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ApiResponse.error(e.getMessage()));
                 }
@@ -119,6 +121,23 @@ public class UserServlet extends HttpServlet {
                     Long addressId = Long.parseLong(idParam);
                     addressService.deleteAddress(currentUser.getId(), addressId);
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Address deleted successfully", null));
+                } catch (IllegalArgumentException e) {
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
+                } catch (Exception e) {
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ApiResponse.error(e.getMessage()));
+                }
+                break;
+
+            case "/addresses/set-default":
+                try {
+                    String idParam = req.getParameter("id");
+                    if (idParam == null) {
+                        JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error("Missing address id parameter"));
+                        break;
+                    }
+                    Long addressId = Long.parseLong(idParam);
+                    addressService.setDefaultAddress(currentUser.getId(), addressId);
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Default address updated successfully", null));
                 } catch (IllegalArgumentException e) {
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, ApiResponse.error(e.getMessage()));
                 } catch (Exception e) {

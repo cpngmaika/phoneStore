@@ -7,6 +7,7 @@ import com.example.server.dto.auth.RegisterRequest;
 import com.example.server.model.User;
 import com.example.server.model.enums.Role;
 import com.example.server.model.enums.UserStatus;
+import com.example.server.util.ValidationUtil;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.Optional;
@@ -23,23 +24,22 @@ public class AuthService {
     }
 
     public User register(RegisterRequest request) {
-        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            throw new RuntimeException("Email cannot be empty");
-        }
-        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-            throw new RuntimeException("Password cannot be empty");
-        }
-        if (userDao.existsByEmail(request.getEmail())) {
+        ValidationUtil.validateFullName(request.getFullName());
+        ValidationUtil.validateEmail(request.getEmail());
+        ValidationUtil.validatePassword(request.getPassword());
+        ValidationUtil.validatePhone(request.getPhone(), false);
+
+        if (userDao.existsByEmail(request.getEmail().trim())) {
             throw new RuntimeException("Email already exists");
         }
 
         String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
 
         User newUser = new User(
-                request.getFullName(),
-                request.getEmail(),
+                request.getFullName().trim(),
+                request.getEmail().trim(),
                 hashedPassword,
-                request.getPhone(),
+                request.getPhone() != null && !request.getPhone().trim().isEmpty() ? request.getPhone().trim() : null,
                 Role.CUSTOMER,
                 UserStatus.ACTIVE
         );

@@ -10,6 +10,10 @@ export const apiEndpoints = {
   orders: "/api/orders",
   users: {
     profile: "/api/user/profile",
+    password: "/api/user/change-password",
     addresses: "/api/user/addresses",
+  },
+  admin: {
+    users: "/api/admin/users",
   },
 } as const;

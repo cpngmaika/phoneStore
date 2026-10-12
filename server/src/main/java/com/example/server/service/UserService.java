@@ -2,6 +2,7 @@ package com.example.server.service;
 
 import com.example.server.dao.AddressDao;
 import com.example.server.dao.UserDao;
+import com.example.server.dao.impl.AddressDaoImpl;
 import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.auth.ChangePasswordRequest;
 import com.example.server.dto.user.AddressRequest;
@@ -13,6 +14,7 @@ import com.example.server.model.Address;
 import com.example.server.model.User;
 import com.example.server.model.enums.Role;
 import com.example.server.model.enums.UserStatus;
+import com.example.server.util.ValidationUtil;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ public class UserService {
 
     public UserService() {
         this.userDao = new UserDaoImpl();
-        this.addressDao = new AddressDao();
+        this.addressDao = new AddressDaoImpl();
         this.addressService = new AddressService(this.addressDao, this.userDao);
     }
 
@@ -47,9 +49,22 @@ public class UserService {
     public User updateProfile(Long userId, UpdateProfileRequest req) {
         User user = getProfile(userId);
 
-        user.setFullName(req.getFullName());
-        user.setPhone(req.getPhone());
-        user.setAvatarUrl(req.getAvatarUrl());
+        if (req.getFullName() != null) {
+            ValidationUtil.validateFullName(req.getFullName());
+            user.setFullName(req.getFullName().trim());
+        }
+        if (req.getPhone() != null && !req.getPhone().trim().isEmpty()) {
+            ValidationUtil.validatePhone(req.getPhone(), true);
+            user.setPhone(req.getPhone().trim());
+        } else if (req.getPhone() != null) {
+            user.setPhone(null);
+        }
+        if (req.getAvatarUrl() != null && !req.getAvatarUrl().trim().isEmpty()) {
+            ValidationUtil.validateUrl(req.getAvatarUrl());
+            user.setAvatarUrl(req.getAvatarUrl().trim());
+        } else if (req.getAvatarUrl() != null) {
+            user.setAvatarUrl(null);
+        }
 
         User updated = userDao.update(user);
         if (updated != null) {
@@ -62,6 +77,16 @@ public class UserService {
     public boolean changePassword(Long userId, ChangePasswordRequest req) {
         User user = getProfile(userId);
         String oldPassword = req.getOldPassword();
+
+        if (oldPassword == null || oldPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Old password cannot be empty");
+        }
+
+        ValidationUtil.validatePassword(req.getNewPassword());
+
+        if (req.getNewPassword().equals(oldPassword)) {
+            throw new IllegalArgumentException("New password cannot be the same as old password");
+        }
 
         boolean isPasswordMatch = BCrypt.checkpw(oldPassword, user.getPasswordHash());
         if (isPasswordMatch) {
@@ -113,13 +138,13 @@ public class UserService {
     }
 
     public UserResponse createUserByAdmin(UserCreateRequest req) {
-        if (req.getEmail() == null || req.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be empty");
-        }
-        if (req.getPassword() == null || req.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Password cannot be empty");
-        }
-        if (userDao.existsByEmail(req.getEmail())) {
+        ValidationUtil.validateFullName(req.getFullName());
+        ValidationUtil.validateEmail(req.getEmail());
+        ValidationUtil.validatePassword(req.getPassword());
+        ValidationUtil.validatePhone(req.getPhone(), false);
+        ValidationUtil.validateUrl(req.getAvatarUrl());
+
+        if (userDao.existsByEmail(req.getEmail().trim())) {
             throw new IllegalArgumentException("Email already exists: " + req.getEmail());
         }
 
@@ -127,11 +152,11 @@ public class UserService {
         String hashedPassword = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt());
 
         User newUser = new User(
-                req.getFullName(),
+                req.getFullName().trim(),
                 req.getEmail().trim(),
                 hashedPassword,
-                req.getPhone(),
-                req.getAvatarUrl(),
+                req.getPhone() != null && !req.getPhone().trim().isEmpty() ? req.getPhone().trim() : null,
+                req.getAvatarUrl() != null && !req.getAvatarUrl().trim().isEmpty() ? req.getAvatarUrl().trim() : null,
                 role,
                 UserStatus.ACTIVE
         );
@@ -160,13 +185,20 @@ public class UserService {
         }
 
         if (req.getFullName() != null) {
-            user.setFullName(req.getFullName());
+            ValidationUtil.validateFullName(req.getFullName());
+            user.setFullName(req.getFullName().trim());
         }
-        if (req.getPhone() != null) {
-            user.setPhone(req.getPhone());
+        if (req.getPhone() != null && !req.getPhone().trim().isEmpty()) {
+            ValidationUtil.validatePhone(req.getPhone(), true);
+            user.setPhone(req.getPhone().trim());
+        } else if (req.getPhone() != null) {
+            user.setPhone(null);
         }
-        if (req.getAvatarUrl() != null) {
-            user.setAvatarUrl(req.getAvatarUrl());
+        if (req.getAvatarUrl() != null && !req.getAvatarUrl().trim().isEmpty()) {
+            ValidationUtil.validateUrl(req.getAvatarUrl());
+            user.setAvatarUrl(req.getAvatarUrl().trim());
+        } else if (req.getAvatarUrl() != null) {
+            user.setAvatarUrl(null);
         }
         if (req.getRole() != null) {
             user.setRole(req.getRole());
