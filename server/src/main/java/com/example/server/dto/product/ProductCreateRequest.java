@@ -15,7 +15,7 @@ public class ProductCreateRequest {
     private ProductStatus status;
     private Long brandId;
     private Long warrantyPolicyId;
-    private List<String> imageUrls; // Danh sách URL hình ảnh sản phẩm gửi từ FE
+    private List<String> imageUrls;
 
     public ProductCreateRequest() {
     }

@@ -8,10 +8,7 @@ import com.example.server.dao.impl.ProductDaoImpl;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
 import com.example.server.exception.AppException;
-import com.example.server.model.Brand;
-import com.example.server.model.Product;
-import com.example.server.model.SmartPhone;
-import com.example.server.model.WarrantyPolicy;
+import com.example.server.model.*;
 import com.example.server.model.enums.Category;
 import com.example.server.model.enums.ProductStatus;
 
@@ -21,7 +18,8 @@ import java.util.stream.Collectors;
 
 public class ProductService {
     private final ProductDao productDao = new ProductDaoImpl();
-    private final BrandDao brandDao = new BrandDaoImpl();    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
+    private final BrandDao brandDao = new BrandDaoImpl();
+    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
 
     public List<ProductResponse> getAllProducts() {
         return productDao.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
@@ -65,6 +63,20 @@ public class ProductService {
                 "Default Chipset", 128, BigDecimal.valueOf(6.1), "OLED", 4000, 48, "iOS", "Black", true
         );
 
+        if (request.getCategory() != null) {
+            product.setCategory(request.getCategory());
+        }
+
+        // Xử lý ánh xạ danh sách imageUrls sang ProductImage
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (int i = 0; i < request.getImageUrls().size(); i++) {
+                String url = request.getImageUrls().get(i);
+                boolean isPrimary = (i == 0); // Ảnh đầu tiên là ảnh chính
+                ProductImage img = new ProductImage(product, url, isPrimary, i);
+                product.getImages().add(img);
+            }
+        }
+
         productDao.save(product);
         return convertToResponse(product);
     }
@@ -76,12 +88,27 @@ public class ProductService {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
-        product.setCategory(request.getCategory());
+
+        if (request.getCategory() != null) {
+            product.setCategory(request.getCategory()); // Cập nhật Category enum trực tiếp
+        }
+
         product.setStatus(request.getStatus());
 
         if (request.getBrandId() != null) {
             Brand brand = brandDao.findById(request.getBrandId());
             if (brand != null) product.setBrand(brand);
+        }
+
+        // Cập nhật lại danh sách hình ảnh
+        if (request.getImageUrls() != null) {
+            product.getImages().clear(); // orphanRemoval = true sẽ tự xóa ảnh cũ trong DB
+            for (int i = 0; i < request.getImageUrls().size(); i++) {
+                String url = request.getImageUrls().get(i);
+                boolean isPrimary = (i == 0);
+                ProductImage img = new ProductImage(product, url, isPrimary, i);
+                product.getImages().add(img);
+            }
         }
 
         productDao.update(product);
@@ -112,10 +139,19 @@ public class ProductService {
         res.setName(product.getName());
         res.setDescription(product.getDescription());
         res.setPrice(product.getPrice());
-        res.setCategory(product.getCategory());
+        res.setCategory(product.getCategory()); // Trả về Enum Category
         res.setStatus(product.getStatus());
+        res.setBrandId(product.getBrand() != null ? product.getBrand().getId() : null);
         res.setBrandName(product.getBrand() != null ? product.getBrand().getName() : null);
-        res.setImageUrls(product.getImages().stream().map(img -> img.getImageUrl()).collect(Collectors.toList()));
+        res.setWarrantyPolicyId(product.getWarrantyPolicy() != null ? product.getWarrantyPolicy().getId() : null);
+
+        // Trả về danh sách URL ảnh được sắp xếp theo sortOrder
+        res.setImageUrls(
+                product.getImages().stream()
+                        .sorted((img1, img2) -> Integer.compare(img1.getSortOrder(), img2.getSortOrder()))
+                        .map(ProductImage::getImageUrl)
+                        .collect(Collectors.toList())
+        );
         return res;
     }
 }
