@@ -21,7 +21,8 @@ import java.util.stream.Collectors;
 
 public class ProductService {
     private final ProductDao productDao = new ProductDaoImpl();
-    private final BrandDao brandDao = new BrandDaoImpl();    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
+    private final BrandDao brandDao = new BrandDaoImpl();
+    private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDao();
 
     public List<ProductResponse> getAllProducts() {
         return productDao.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
