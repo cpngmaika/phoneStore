@@ -1,74 +1,87 @@
-package com.example.server.model;
+```java
+        package com.example.server.model;
 
 import com.example.server.model.enums.OrderStatus;
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.math.BigDecimal;
 
 @Entity
 @Table(name = "orders")
 public class Order {
 
+    // Ma don hang
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_number", nullable = false, unique = true, length = 50)
+    // Ma don hang hien thi
+    @Column(name = "order_number", unique = true)
     private String orderNumber;
 
+    // Trang thai don hang
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Column(name = "status")
     private OrderStatus status = OrderStatus.PENDING;
 
-    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    // Tong tien don hang sau khi ap dung giam gia
+    @Column(name = "total_amount", precision = 15, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Column(name = "order_date", nullable = false)
+    // Ngay tao don hang
+    @Column(name = "order_date")
     private LocalDateTime orderDate;
 
+    // Nguoi dat hang
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
+    // Ma giam gia duoc ap dung cho don hang
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coupon_id")
     private Coupon coupon;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    // Danh sach san pham trong don hang
+    @OneToMany(
+            mappedBy = "order",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<LineItem> items = new ArrayList<>();
 
-    public Order() {
-    }
-
-    public Order(String orderNumber, User user) {
-        this.orderNumber = orderNumber;
-        this.user = user;
-        this.orderDate = LocalDateTime.now();
-    }
-
-    // Các phương thức hỗ trợ quản lý danh sách sản phẩm trong đơn hàng
+    // Them san pham vao don hang
     public void addLineItem(LineItem item) {
+        if (item == null) {
+            return;
+        }
+
         items.add(item);
         item.setOrder(this);
-        calculateTotal();
     }
 
+    // Xoa san pham khoi don hang
     public void removeLineItem(LineItem item) {
+        if (item == null) {
+            return;
+        }
+
         items.remove(item);
         item.setOrder(null);
-        calculateTotal();
     }
 
+    // Tinh tong tien cac san pham
     public void calculateTotal() {
         this.totalAmount = items.stream()
                 .map(LineItem::getSubtotal)
+                .filter(subtotal -> subtotal != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // Getters and Setters
+    // Getter va Setter
     public Long getId() {
         return id;
     }
@@ -117,14 +130,6 @@ public class Order {
         this.user = user;
     }
 
-    public List<LineItem> getItems() {
-        return items;
-    }
-
-    public void setItems(List<LineItem> items) {
-        this.items = items;
-    }
-
     public Coupon getCoupon() {
         return coupon;
     }
@@ -132,4 +137,13 @@ public class Order {
     public void setCoupon(Coupon coupon) {
         this.coupon = coupon;
     }
+
+    public List<LineItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<LineItem> items) {
+        this.items = items;
+    }
 }
+```
