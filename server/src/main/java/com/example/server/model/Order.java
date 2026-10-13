@@ -52,9 +52,15 @@ public class Order {
     )
     private List<LineItem> items = new ArrayList<>();
 
+    // Danh sach thanh toan cua don hang
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    private List<Payment> payments = new ArrayList<>();
+
+    // Constructor mac dinh cho JPA
     public Order() {
     }
 
+    // Constructor tao don hang
     public Order(String orderNumber, User user) {
         this.orderNumber = orderNumber;
         this.user = user;
@@ -151,5 +157,13 @@ public class Order {
 
     public void setItems(List<LineItem> items) {
         this.items = items;
+    }
+
+    public List<Payment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<Payment> payments) {
+        this.payments = payments;
     }
 }

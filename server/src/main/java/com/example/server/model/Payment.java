@@ -14,13 +14,9 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "order_id",
-            nullable = false,
-            unique = true,
-            foreignKey = @ForeignKey(name = "fk_payments_order")
-    )
+    // Giu ManyToOne de phu hop voi Order.payments
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +33,10 @@ public class Payment {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    // Ma giao dich / ma thanh toan dung cho SePay
+    @Column(name = "payment_code", unique = true)
+    private String paymentCode;
 
     protected Payment() {
     }
@@ -85,5 +85,17 @@ public class Payment {
 
     public LocalDateTime getPaidAt() {
         return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public String getPaymentCode() {
+        return paymentCode;
+    }
+
+    public void setPaymentCode(String paymentCode) {
+        this.paymentCode = paymentCode;
     }
 }
