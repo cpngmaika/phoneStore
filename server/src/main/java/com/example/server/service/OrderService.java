@@ -90,8 +90,7 @@ public class OrderService {
 
                 Product product = em.find(
                         Product.class,
-                        productId,
-                        LockModeType.PESSIMISTIC_READ
+                        productId
                 );
 
                 if (product == null) {
