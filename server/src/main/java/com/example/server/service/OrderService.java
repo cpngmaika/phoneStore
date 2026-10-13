@@ -1,5 +1,4 @@
-```java
-        package com.example.server.service;
+package com.example.server.service;
 
 import com.example.server.config.JPAConfig;
 import com.example.server.model.Coupon;
@@ -208,7 +207,9 @@ public class OrderService {
         try {
             TypedQuery<Order> query = em.createQuery(
                     "SELECT DISTINCT o FROM Order o "
-                            + "LEFT JOIN FETCH o.items "
+                            + "LEFT JOIN FETCH o.items item "
+                            + "LEFT JOIN FETCH item.product "
+                            + "LEFT JOIN FETCH o.coupon "
                             + "WHERE o.user.id = :userId "
                             + "ORDER BY o.orderDate DESC",
                     Order.class
@@ -234,7 +235,9 @@ public class OrderService {
         try {
             TypedQuery<Order> query = em.createQuery(
                     "SELECT DISTINCT o FROM Order o "
-                            + "LEFT JOIN FETCH o.items "
+                            + "LEFT JOIN FETCH o.items item "
+                            + "LEFT JOIN FETCH item.product "
+                            + "LEFT JOIN FETCH o.coupon "
                             + "WHERE o.id = :orderId",
                     Order.class
             );
@@ -245,6 +248,24 @@ public class OrderService {
 
             return orders.isEmpty() ? null : orders.get(0);
 
+        } finally {
+            em.close();
+        }
+    }
+
+    public List<Order> layTatCaDonHang() {
+        EntityManager em = JPAConfig.getEntityManager();
+
+        try {
+            return em.createQuery(
+                            "SELECT DISTINCT o FROM Order o "
+                                    + "LEFT JOIN FETCH o.items item "
+                                    + "LEFT JOIN FETCH item.product "
+                                    + "LEFT JOIN FETCH o.coupon "
+                                    + "ORDER BY o.orderDate DESC",
+                            Order.class
+                    )
+                    .getResultList();
         } finally {
             em.close();
         }
@@ -290,4 +311,3 @@ public class OrderService {
         }
     }
 }
-```

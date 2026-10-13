@@ -1,13 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
-import { formatCurrency, titleCase } from "@/modules/products/product.utils";
+import { formatCurrency, titleCase } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
 
 export function ProductCard({ product }: { product: Product }) {
   const primaryImage = product.images.find((image) => image.isPrimary);
-  const rating =
-    product.reviews.reduce((sum, review) => sum + review.rating, 0) /
-    product.reviews.length;
+  const rating = product.reviews.length
+    ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+      product.reviews.length
+    : null;
 
   return (
     <Link href={`/products/${product.id}`} className="group block">
@@ -45,7 +46,13 @@ export function ProductCard({ product }: { product: Product }) {
               {formatCurrency(product.price)}
             </p>
             <p className="text-sm font-medium text-text-muted">
-              <span className="text-star">★</span> {rating.toFixed(1)}
+              {rating === null ? (
+                <span>Chưa có đánh giá</span>
+              ) : (
+                <>
+                  <span className="text-star">★</span> {rating.toFixed(1)}
+                </>
+              )}
             </p>
           </div>
         </div>

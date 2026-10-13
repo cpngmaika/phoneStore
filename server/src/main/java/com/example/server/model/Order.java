@@ -1,7 +1,6 @@
 package com.example.server.model;
 
 import com.example.server.model.enums.OrderStatus;
-import com.example.server.model.Payment;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -53,17 +52,19 @@ public class Order {
     )
     private List<LineItem> items = new ArrayList<>();
 
+    // Danh sach thanh toan cua don hang
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<Payment> payments = new ArrayList<>();
 
-    public List<Payment> getPayments() {
-        return payments;
+    // Constructor mac dinh cho JPA
+    public Order() {
     }
 
-    public void setPayments(List<Payment> payments) {
-        this.payments = payments;
+    // Constructor tao don hang
+    public Order(String orderNumber, User user) {
+        this.orderNumber = orderNumber;
+        this.user = user;
     }
-
 
     // Them san pham vao don hang
     public void addLineItem(LineItem item) {
@@ -156,5 +157,13 @@ public class Order {
 
     public void setItems(List<LineItem> items) {
         this.items = items;
+    }
+
+    public List<Payment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<Payment> payments) {
+        this.payments = payments;
     }
 }

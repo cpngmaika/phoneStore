@@ -1,5 +1,5 @@
 const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/server_war_exploded"
 ).replace(/\/+$/, "");
 
 export async function apiClient<T>(

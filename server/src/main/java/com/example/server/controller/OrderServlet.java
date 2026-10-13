@@ -1,58 +1,299 @@
 package com.example.server.controller;
 
-import com.example.server.dao.impl.OrderDAOImpl;
+import com.example.server.dao.ProductDao;
+import com.example.server.dao.impl.ProductDaoImpl;
+import com.example.server.dto.common.ApiResponse;
+import com.example.server.dto.order.OrderCreateRequest;
+import com.example.server.dto.order.OrderItemRequest;
+import com.example.server.dto.order.OrderItemResponse;
+import com.example.server.dto.order.OrderResponse;
+import com.example.server.model.LineItem;
 import com.example.server.model.Order;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.example.server.model.Product;
+import com.example.server.model.User;
+import com.example.server.service.OrderService;
+import com.example.server.util.JsonUtil;
+import com.example.server.util.SessionUtil;
+
 import jakarta.servlet.ServletException;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.Comparator;
-import com.example.server.model.Payment;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-@WebServlet("/api/orders")
+@WebServlet("/api/orders/*")
 public class OrderServlet extends HttpServlet {
-    private final OrderDAOImpl orderDAO = new OrderDAOImpl();
 
-    // Sử dụng Jackson ObjectMapper thay cho Gson
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
+    private final OrderService orderService = new OrderService();
+    private final ProductDao productDao = new ProductDaoImpl();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json; charset=UTF-8");
-       
-       List<Order> orders = orderDAO.findAllWithAmount();
+    protected void doGet(
+            HttpServletRequest req,
+            HttpServletResponse resp
+    ) throws ServletException, IOException {
 
-        List<Map<String, Object>> result = orders.stream()
-                .map(order -> {
-                    Map<String, Object> data = new LinkedHashMap<>();
+        User user = SessionUtil.getLoggedInUser(req);
 
-                    data.put("id", order.getId());
-                    data.put("orderCode", order.getOrderCode());
-                    data.put("status", order.getStatus());
-                    data.put("userId", order.getUserId());
-                    data.put("shippingAddressId", order.getShippingAddressId());
+        if (user == null) {
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    ApiResponse.error("Please login first")
+            );
+            return;
+        }
 
-                    Payment payment = order.getPayments().stream()
-                            .max(Comparator.comparing(Payment::getId))
-                            .orElse(null);
+        String path = req.getPathInfo();
 
-                    data.put(
-                            "amount",
-                            payment != null ? payment.getAmount() : null
+        try {
+            // GET /api/orders
+            // Lấy danh sách đơn hàng của người dùng hiện tại.
+            if (path == null || "/".equals(path)) {
+
+                List<OrderResponse> orders = orderService
+                        .layDonHangTheoNguoiDung(user.getId())
+                        .stream()
+                        .map(OrderServlet::toResponse)
+                        .toList();
+
+                JsonUtil.sendJson(
+                        resp,
+                        HttpServletResponse.SC_OK,
+                        ApiResponse.success(
+                                "Orders retrieved successfully",
+                                orders
+                        )
+                );
+                return;
+            }
+
+            // GET /api/orders/{id}
+            Long orderId = parseOrderId(path);
+
+            Order order = orderService.timDonHangTheoId(orderId);
+
+            if (order == null
+                    || order.getUser() == null
+                    || !user.getId().equals(order.getUser().getId())) {
+
+                JsonUtil.sendJson(
+                        resp,
+                        HttpServletResponse.SC_NOT_FOUND,
+                        ApiResponse.error("Order not found")
+                );
+                return;
+            }
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_OK,
+                    ApiResponse.success(
+                            "Order retrieved successfully",
+                            toResponse(order)
+                    )
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    ApiResponse.error(e.getMessage())
+            );
+
+        } catch (Exception e) {
+
+            log("Unable to retrieve orders", e);
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    ApiResponse.error("Unable to retrieve orders")
+            );
+        }
+    }
+
+    @Override
+    protected void doPost(
+            HttpServletRequest req,
+            HttpServletResponse resp
+    ) throws ServletException, IOException {
+
+        User user = SessionUtil.getLoggedInUser(req);
+
+        if (user == null) {
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    ApiResponse.error("Please login first")
+            );
+            return;
+        }
+
+        try {
+            // POST /api/orders
+            OrderCreateRequest request =
+                    JsonUtil.toObject(req, OrderCreateRequest.class);
+
+            if (request == null
+                    || request.getItems() == null
+                    || request.getItems().isEmpty()) {
+
+                JsonUtil.sendJson(
+                        resp,
+                        HttpServletResponse.SC_BAD_REQUEST,
+                        ApiResponse.error(
+                                "Order must contain at least one item"
+                        )
+                );
+                return;
+            }
+
+            List<LineItem> items = new ArrayList<>();
+
+            for (OrderItemRequest item : request.getItems()) {
+
+                if (item == null
+                        || item.getProductId() == null
+                        || item.getQuantity() == null
+                        || item.getQuantity() <= 0) {
+
+                    JsonUtil.sendJson(
+                            resp,
+                            HttpServletResponse.SC_BAD_REQUEST,
+                            ApiResponse.error("Order item is invalid")
+                    );
+                    return;
+                }
+
+                Optional<Product> productOptional =
+                        productDao.findOptionalById(item.getProductId());
+
+                if (productOptional.isEmpty()) {
+                    JsonUtil.sendJson(
+                            resp,
+                            HttpServletResponse.SC_BAD_REQUEST,
+                            ApiResponse.error(
+                                    "Product not found: "
+                                            + item.getProductId()
+                            )
+                    );
+                    return;
+                }
+
+                Product product = productOptional.get();
+
+                items.add(
+                        new LineItem(
+                                product,
+                                item.getQuantity(),
+                                product.getPrice()
+                        )
+                );
+            }
+
+            Order order = orderService.taoDonHang(
+                    user.getId(),
+                    items,
+                    request.getCouponCode()
+            );
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_CREATED,
+                    ApiResponse.success(
+                            "Order created successfully",
+                            toResponse(order)
+                    )
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    ApiResponse.error(e.getMessage())
+            );
+
+        } catch (Exception e) {
+
+            log("Unable to create order", e);
+
+            JsonUtil.sendJson(
+                    resp,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    ApiResponse.error("Unable to create order")
+            );
+        }
+    }
+
+    private static Long parseOrderId(String path) {
+
+        if (!path.matches("/\\d+")) {
+            throw new IllegalArgumentException("Invalid order ID");
+        }
+
+        try {
+            return Long.parseLong(path.substring(1));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid order ID");
+        }
+    }
+
+    static OrderResponse toResponse(Order order) {
+
+        OrderResponse response = new OrderResponse();
+
+        response.setId(order.getId());
+        response.setOrderCode(order.getOrderNumber());
+        response.setStatus(order.getStatus());
+        response.setTotalAmount(order.getTotalAmount());
+
+        response.setCouponCode(
+                order.getCoupon() == null
+                        ? null
+                        : order.getCoupon().getCode()
+        );
+
+        List<OrderItemResponse> items = order.getItems()
+                .stream()
+                .map(item -> {
+
+                    OrderItemResponse itemResponse =
+                            new OrderItemResponse();
+
+                    itemResponse.setProductId(
+                            item.getProduct().getId()
                     );
 
-                    return data;
+                    itemResponse.setProductName(
+                            item.getProduct().getName()
+                    );
+
+                    itemResponse.setQuantity(
+                            item.getQuantity()
+                    );
+
+                    itemResponse.setUnitPrice(
+                            item.getUnitPrice()
+                    );
+
+                    itemResponse.setSubtotal(
+                            item.getSubtotal()
+                    );
+
+                    return itemResponse;
                 })
                 .toList();
 
-        resp.getWriter().write(objectMapper.writeValueAsString(result));
+        response.setItems(items);
+
+        return response;
     }
 }

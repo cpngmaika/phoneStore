@@ -15,6 +15,7 @@ public class CouponResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean isActive;
+    private Integer usageLimit;
 
     public CouponResponse() {
     }
@@ -45,4 +46,7 @@ public class CouponResponse {
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public Integer getUsageLimit() { return usageLimit; }
+    public void setUsageLimit(Integer usageLimit) { this.usageLimit = usageLimit; }
 }
