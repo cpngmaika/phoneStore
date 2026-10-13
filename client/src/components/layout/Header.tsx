@@ -5,22 +5,37 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/hooks/cart.hooks";
 import { logout } from "@/api/auth.service";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { dispatchAuthChange, useCurrentUser } from "@/hooks/use-current-user";
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { itemCount } = useCart();
-  const { user } = useCurrentUser(pathname);
+
+  // Lấy thông tin tài khoản đang đăng nhập và hàm setUser để cập nhật trạng thái
+  const { user, setUser } = useCurrentUser(pathname);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
+  /**
+   * Xử lý đăng xuất tài khoản:
+   * 1. Gửi request POST /api/auth/logout để Backend hủy Session trong Servlet container.
+   * 2. Lập tức đặt setUser(null) tại Client để giao diện Header ẩn ngay "Quản trị", "Đăng xuất"
+   *    và hiển thị lại nút "Đăng nhập" mà không cần đợi tải lại trang.
+   * 3. Phát sự kiện dispatchAuthChange() để đồng bộ với mọi component khác trong ứng dụng.
+   * 4. Điều hướng người dùng về trang Đăng nhập (/login) để có thể đăng nhập tài khoản khác ngay.
+   */
   async function signOut() {
     setLogoutError(null);
     try {
       await logout();
-      router.push("/");
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "Không thể đăng xuất.");
+    } finally {
+      // Giải phóng thông tin đăng nhập phía Client
+      setUser(null);
+      dispatchAuthChange();
+      router.push("/login");
+      router.refresh();
     }
   }
 

@@ -2,12 +2,13 @@
 
 /**
  * - Vai trò: Cho phép Quản trị viên (ADMIN) theo dõi toàn bộ danh sách tài khoản
- *   người dùng trên hệ thống, thực hiện tạo mới người dùng và khóa / mở khóa tài khoản.
+ *   người dùng trên hệ thống, tìm kiếm, lọc phân loại, tạo mới và khóa / mở khóa tài khoản.
  * - Các tính năng chính:
  *   1. Kiểm soát quyền truy cập: Chỉ cho phép người dùng có vai trò ADMIN thao tác.
- *   2. Tải danh sách người dùng: Gọi API GET /api/admin/users để hiển thị dạng bảng.
- *   3. Tạo tài khoản mới: Quản trị viên có thể tạo trực tiếp tài khoản CUSTOMER hoặc ADMIN.
- *   4. Quản lý trạng thái: Khóa (LOCKED) hoặc Mở khóa (ACTIVE) người dùng theo thời gian thực.
+ *   2. Tải & Lọc danh sách: Gọi API GET /api/admin/users hỗ trợ tìm kiếm động theo keyword, role, status.
+ *   3. Tìm kiếm linh hoạt: Tìm theo tên, email, SĐT; lọc tức thì theo vai trò (CUSTOMER/ADMIN) và trạng thái (ACTIVE/LOCKED).
+ *   4. Tạo tài khoản mới: Quản trị viên có thể tạo trực tiếp tài khoản CUSTOMER hoặc ADMIN.
+ *   5. Quản lý trạng thái: Khóa (LOCKED) hoặc Mở khóa (ACTIVE) người dùng theo thời gian thực.
  * =============================================================================
  */
 
@@ -33,46 +34,105 @@ export default function AdminUsersPage() {
   // State biểu thị trạng thái đang thực hiện tạo tài khoản mới (tránh click đúp)
   const [busy, setBusy] = useState(false);
 
-  /**
-   * Tải lại toàn bộ danh sách người dùng từ máy chủ Backend
-   */
-  const loadUsers = useCallback(async () => {
-    const result = await getAdminUsers();
-    setUsers(result);
-  }, []);
+  // ===========================================================================
+  // STATE BỘ LỌC TÌM KIẾM & PHÂN LOẠI NGƯỜI DÙNG
+  // ===========================================================================
+  // 1. keyword: Từ khóa tìm kiếm nhập vào (họ tên, email, số điện thoại)
+  const [keyword, setKeyword] = useState("");
+  // 2. roleFilter: Bộ lọc vai trò ("" = Tất cả, "CUSTOMER" = Khách hàng, "ADMIN" = Quản trị)
+  const [roleFilter, setRoleFilter] = useState<ApiUser["role"] | "">("");
+  // 3. statusFilter: Bộ lọc trạng thái ("" = Tất cả, "ACTIVE" = Hoạt động, "LOCKED" = Đã khóa)
+  const [statusFilter, setStatusFilter] = useState<ApiUser["status"] | "">("");
 
   /**
-   * Hook kiểm tra quyền truy cập và tự động tải dữ liệu ban đầu
+   * Tải danh sách người dùng từ máy chủ Backend theo bộ lọc:
+   * - Hỗ trợ tham số ghi đè (overrideFilters) để xử lý bất đồng bộ khi người dùng vừa chọn dropdown.
+   * - Gọi Service getAdminUsers({ keyword, role, status }) nối query param gửi tới AdminUserServlet.
+   */
+  const loadUsers = useCallback(
+    async (overrideFilters?: {
+      keyword?: string;
+      role?: ApiUser["role"] | "";
+      status?: ApiUser["status"] | "";
+    }) => {
+      setLoadingUsers(true);
+      setError(null);
+      try {
+        const activeKeyword =
+          overrideFilters?.keyword !== undefined
+            ? overrideFilters.keyword
+            : keyword;
+        const activeRole =
+          overrideFilters?.role !== undefined
+            ? overrideFilters.role
+            : roleFilter;
+        const activeStatus =
+          overrideFilters?.status !== undefined
+            ? overrideFilters.status
+            : statusFilter;
+
+        // Gửi truy vấn tìm kiếm tới API Backend
+        const result = await getAdminUsers({
+          keyword: activeKeyword.trim() || undefined,
+          role: (activeRole as ApiUser["role"]) || undefined,
+          status: (activeStatus as ApiUser["status"]) || undefined,
+        });
+        setUsers(result);
+      } catch (requestError: unknown) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Không thể tải danh sách người dùng."
+        );
+      } finally {
+        setLoadingUsers(false);
+      }
+    },
+    [keyword, roleFilter, statusFilter]
+  );
+
+  /**
+   * Hook kiểm tra quyền truy cập: Chỉ tải dữ liệu khi tài khoản hiện tại có vai trò ADMIN
    */
   useEffect(() => {
-    // Nếu không phải ADMIN, không thực hiện truy vấn API để bảo mật
     if (user?.role !== "ADMIN") return;
-
-    let cancelled = false;
-
-    // Gọi API lấy danh sách tài khoản
-    getAdminUsers()
-      .then((result) => {
-        if (!cancelled) setUsers(result);
-      })
-      .catch((requestError: unknown) => {
-        if (!cancelled) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Không thể tải danh sách người dùng."
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingUsers(false);
-      });
-
-    // Cleanup function: Hủy cập nhật state nếu component bị unmount trong lúc đang tải
-    return () => {
-      cancelled = true;
-    };
+    void loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  /**
+   * Xử lý tìm kiếm khi người dùng nhấn nút "Tìm kiếm" hoặc nhấn phím Enter trên ô nhập liệu
+   */
+  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadUsers();
+  }
+
+  /**
+   * Xử lý thay đổi vai trò: Cập nhật state roleFilter và gọi API tải lại dữ liệu tức thì
+   */
+  function handleRoleChange(newRole: ApiUser["role"] | "") {
+    setRoleFilter(newRole);
+    void loadUsers({ role: newRole });
+  }
+
+  /**
+   * Xử lý thay đổi trạng thái: Cập nhật state statusFilter và gọi API tải lại dữ liệu tức thì
+   */
+  function handleStatusChange(newStatus: ApiUser["status"] | "") {
+    setStatusFilter(newStatus);
+    void loadUsers({ status: newStatus });
+  }
+
+  /**
+   * Xử lý Đặt lại: Xóa trắng toàn bộ bộ lọc và tải lại danh sách đầy đủ ban đầu
+   */
+  function handleReset() {
+    setKeyword("");
+    setRoleFilter("");
+    setStatusFilter("");
+    void loadUsers({ keyword: "", role: "", status: "" });
+  }
 
   /**
    * Xử lý tạo mới tài khoản người dùng bởi Quản trị viên
@@ -225,28 +285,102 @@ export default function AdminUsersPage() {
         </button>
       </form>
 
+      {/* Bộ lọc và Tìm kiếm người dùng */}
+      <section className="rounded-xl border border-border bg-surface p-6 space-y-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-semibold text-text">Bộ lọc & Tìm kiếm người dùng</h2>
+            <p className="text-xs text-text-muted mt-0.5">
+              Tìm theo từ khóa (họ tên, email, SĐT) và phân loại theo vai trò, trạng thái.
+            </p>
+          </div>
+          <span className="text-xs text-text-muted font-medium bg-surface-muted px-2.5 py-1 rounded-full self-start sm:self-auto">
+            Tổng cộng: {users.length} người dùng
+          </span>
+        </div>
+
+        <form onSubmit={handleSearch} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Ô tìm kiếm từ khóa */}
+          <div className="lg:col-span-2">
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="Nhập tên, email hoặc số điện thoại..."
+              className="h-10 w-full rounded-lg border border-border px-3 text-sm outline-none focus:border-primary"
+            />
+          </div>
+
+          {/* Dropdown lọc theo Vai trò */}
+          <div>
+            <select
+              value={roleFilter}
+              onChange={(e) => handleRoleChange(e.target.value as ApiUser["role"] | "")}
+              className="h-10 w-full rounded-lg border border-border px-3 text-sm outline-none focus:border-primary bg-surface text-text"
+            >
+              <option value="">Tất cả vai trò</option>
+              <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+              <option value="ADMIN">Quản trị viên (ADMIN)</option>
+            </select>
+          </div>
+
+          {/* Dropdown lọc theo Trạng thái */}
+          <div>
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusChange(e.target.value as ApiUser["status"] | "")}
+              className="h-10 w-full rounded-lg border border-border px-3 text-sm outline-none focus:border-primary bg-surface text-text"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+              <option value="LOCKED">Đã khóa (LOCKED)</option>
+            </select>
+          </div>
+
+          {/* Nút Tìm kiếm & Đặt lại */}
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={loadingUsers}
+              className="flex-1 h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
+            >
+              {loadingUsers ? "Đang tìm..." : "Tìm kiếm"}
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={loadingUsers}
+              className="h-10 rounded-lg border border-border px-3 text-sm font-semibold text-text-muted transition hover:bg-surface-muted disabled:opacity-60"
+            >
+              Đặt lại
+            </button>
+          </div>
+        </form>
+      </section>
+
       {/* Bảng hiển thị danh sách người dùng với các cột được căn chỉnh chuẩn */}
       <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border bg-surface-muted text-xs font-semibold uppercase text-text-muted">
             <tr>
               <th className="px-6 py-3.5">Họ và tên</th>
-              <th className="px-6 py-3.5">Email</th>
-              <th className="px-6 py-3.5 text-center w-36">Vai trò</th>
+              <th className="px-6 py-3.5">Email / SĐT</th>
+              <th className="px-6 py-3.5 text-center w-32">Vai trò</th>
+              <th className="px-6 py-3.5 text-center w-36">Trạng thái</th>
               <th className="px-6 py-3.5 text-right w-36">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {loadingUsers ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-sm text-text-muted">
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-text-muted">
                   Đang tải danh sách người dùng...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-sm text-text-muted">
-                  Chưa có người dùng nào trong hệ thống.
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-text-muted">
+                  Không tìm thấy người dùng nào phù hợp với bộ lọc.
                 </td>
               </tr>
             ) : (
@@ -255,8 +389,13 @@ export default function AdminUsersPage() {
                   {/* Họ tên người dùng */}
                   <td className="px-6 py-4 font-medium text-text">{item.fullName}</td>
 
-                  {/* Địa chỉ Email */}
-                  <td className="px-6 py-4 text-text-muted truncate max-w-xs">{item.email}</td>
+                  {/* Địa chỉ Email và SĐT */}
+                  <td className="px-6 py-4 text-text-muted truncate max-w-xs">
+                    <div>{item.email}</div>
+                    {item.phone ? (
+                      <div className="text-xs text-text-muted/80">{item.phone}</div>
+                    ) : null}
+                  </td>
 
                   {/* Nhãn vai trò (Badge hiển thị ADMIN hoặc CUSTOMER) */}
                   <td className="px-6 py-4 text-center">
@@ -268,6 +407,19 @@ export default function AdminUsersPage() {
                       }`}
                     >
                       {item.role}
+                    </span>
+                  </td>
+
+                  {/* Nhãn trạng thái tài khoản */}
+                  <td className="px-6 py-4 text-center">
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        item.status === "ACTIVE"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {item.status === "ACTIVE" ? "Hoạt động" : "Đã khóa"}
                     </span>
                   </td>
 

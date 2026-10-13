@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { login } from "@/api/auth.service";
+import { dispatchAuthChange } from "@/hooks/use-current-user";
 
 export default function LoginPage() {
   // Hook điều hướng trang của Next.js App Router
@@ -45,8 +46,12 @@ export default function LoginPage() {
         password: String(data.get("password")),
       });
 
-      // 4. Kiểm tra vai trò của người dùng để điều hướng phù hợp
+      // 4. Phát tín hiệu cập nhật trạng thái đăng nhập cho Header và các component
+      dispatchAuthChange();
+
+      // 5. Kiểm tra vai trò của người dùng để điều hướng phù hợp
       router.push(user.role === "ADMIN" ? "/admin" : "/profile");
+      router.refresh();
     } catch (requestError) {
       // 5. Bắt lỗi từ Backend và hiển thị lên giao diện
       setError(
