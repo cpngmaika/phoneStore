@@ -5,6 +5,7 @@ import com.example.server.model.enums.ProductStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public class ProductResponse {
     private Long id;
@@ -18,6 +19,7 @@ public class ProductResponse {
     private String brandName;
     private Long warrantyPolicyId;
     private List<String> imageUrls;
+    private Map<String, Object> specifications;
 
     public ProductResponse() {
     }
@@ -54,4 +56,7 @@ public class ProductResponse {
 
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public Map<String, Object> getSpecifications() { return specifications; }
+    public void setSpecifications(Map<String, Object> specifications) { this.specifications = specifications; }
 }

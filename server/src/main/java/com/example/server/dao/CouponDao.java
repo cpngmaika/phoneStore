@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
 import java.util.List;
+import java.time.LocalDate;
 
 public class CouponDao extends BaseDao<Coupon, Long> {
 
@@ -37,6 +38,27 @@ public class CouponDao extends BaseDao<Coupon, Long> {
 
             return coupons.get(0);
 
+        } finally {
+            em.close();
+        }
+
+    }
+
+    public List<Coupon> findAvailableCoupons(LocalDate date) {
+        EntityManager em = getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT c FROM Coupon c "
+                                    + "WHERE c.isActive = true "
+                                    + "AND c.startDate <= :date "
+                                    + "AND c.endDate >= :date "
+                                    + "AND c.usageLimit > "
+                                    + "(SELECT COUNT(o) FROM Order o WHERE o.coupon = c) "
+                                    + "ORDER BY c.endDate ASC",
+                            Coupon.class
+                    )
+                    .setParameter("date", date)
+                    .getResultList();
         } finally {
             em.close();
         }

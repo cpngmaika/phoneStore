@@ -3,18 +3,35 @@ package com.example.server.dao.impl;
 import com.example.server.dao.BaseDao;
 import com.example.server.dao.ProductDao;
 import com.example.server.model.Product;
+import com.example.server.model.SmartPhone;
+import com.example.server.model.Tablet;
+import com.example.server.model.Earphone;
+import com.example.server.model.Charger;
+import com.example.server.model.Cable;
+import com.example.server.model.Case;
 import com.example.server.model.enums.Category;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
 public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao {
-    private static final String PRODUCT_DETAILS_FROM =
-            " FROM Product p JOIN FETCH p.brand LEFT JOIN FETCH p.images";
+    private static final List<Class<? extends Product>> PRODUCT_TYPES = List.of(
+            SmartPhone.class,
+            Tablet.class,
+            Earphone.class,
+            Charger.class,
+            Cable.class,
+            Case.class
+    );
 
     public ProductDaoImpl() {
         super(Product.class);
@@ -22,15 +39,7 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
 
     @Override
     public List<Product> findAll() {
-        EntityManager em = getEntityManager();
-        try {
-            return em.createQuery(
-                    "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM,
-                    Product.class
-            ).getResultList();
-        } finally {
-            em.close();
-        }
+        return search(null, null, null, null, null);
     }
 
     @Override
@@ -39,72 +48,31 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
             return Optional.empty();
         }
 
-        EntityManager em = getEntityManager();
-        try {
-            Product product = em.createQuery(
-                            "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE p.id = :id",
-                            Product.class
-                    )
-                    .setParameter("id", id)
-                    .getSingleResult();
-            return Optional.of(product);
-        } catch (NoResultException e) {
-            return Optional.empty();
-        } finally {
-            em.close();
-        }
+        return findFirst(PRODUCT_TYPES.stream()
+                .flatMap(type -> findByType(type, id, null, null, null, null, null, null).stream())
+                .toList());
+    }
+
+    @Override
+    public Product findById(Long id) {
+        return findOptionalById(id).orElse(null);
     }
 
     @Override
     public Optional<Product> findBySku(String sku) {
-        EntityManager em = getEntityManager();
-        try {
-            return Optional.of(
-                    em.createQuery(
-                "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
-                        + " WHERE p.sku = :sku",
-                        Product.class
-                )
-                .setParameter("sku", sku)
-                .getSingleResult()
-                    );
-        } catch (NoResultException e) {
-            return Optional.empty();
-        } finally {
-            em.close();
-        }
+        return findFirst(PRODUCT_TYPES.stream()
+                .flatMap(type -> findByType(type, null, sku, null, null, null, null, null).stream())
+                .toList());
     }
 
     @Override
     public List<Product> findByCategory(Category category) {
-        EntityManager em = getEntityManager();
-        try {
-            return em.createQuery(
-            "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
-                    + " WHERE p.category = :category",
-            Product.class
-            )
-            .setParameter("category", category)
-            .getResultList();
-        } finally {
-            em.close();
-        }
+        return search(null, category, null, null, null);
     }
 
     @Override
     public List<Product> findByBrandId(Long brandId) {
-        EntityManager em = getEntityManager();
-        try {
-            return em.createQuery(
-                            "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM
-                                    + " WHERE p.brand.id = :brandId",
-                            Product.class
-                    )
-                    .setParameter("brandId", brandId)
-                    .getResultList();
-        } finally {
-            em.close();
-        }
+        return search(null, null, brandId, null, null);
     }
 
     @Override
@@ -115,60 +83,76 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
-        EntityManager em = getEntityManager();
-        try {
-            StringBuilder jpql = new StringBuilder(
-                    "SELECT DISTINCT p" + PRODUCT_DETAILS_FROM + " WHERE 1=1"
-            );
-
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                jpql.append(" AND (LOWER(p.name) LIKE LOWER(:keyword)"
-                        + " OR LOWER(p.sku) LIKE LOWER(:keyword))");
-            }
-            if (category != null) {
-                jpql.append(" AND p.category = :category");
-            }
-            if (brandId != null) {
-                jpql.append(" AND p.brand.id = :brandId");
-            }
-            if (minPrice != null) {
-                jpql.append(" AND p.price >= :minPrice");
-            }
-            if (maxPrice != null) {
-                jpql.append(" AND p.price <= :maxPrice");
-            }
-
-            var query = em.createQuery(jpql.toString(), Product.class);
-
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                query.setParameter("keyword", "%" + keyword.trim() + "%");
-            }
-            if (category != null) {
-                query.setParameter("category", category);
-            }
-            if (brandId != null) {
-                query.setParameter("brandId", brandId);
-            }
-            if (minPrice != null) {
-                query.setParameter("minPrice", minPrice);
-            }
-            if (maxPrice != null) {
-                query.setParameter("maxPrice", maxPrice);
-            }
-
-            return query.getResultList();
-        } finally {
-            em.close();
+        List<Product> products = new ArrayList<>();
+        for (Class<? extends Product> type : PRODUCT_TYPES) {
+            products.addAll(findByType(
+                    type, null, null, keyword, category, brandId, minPrice, maxPrice
+            ));
         }
+        products.sort(Comparator.comparing(Product::getId));
+        return products;
     }
 
     @Override
     public boolean hasReferences(Long productId) {
         EntityManager em = getEntityManager();
         try {
-            return hasReference(em, "OrderItem", productId)
-                    || hasReference(em, "CartItem", productId)
+            return hasLineItemReference(em, productId)
                     || hasReference(em, "ProductReview", productId);
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public boolean deleteById(Long id) {
+        if (id == null) return false;
+        Optional<Product> product = findOptionalById(id);
+        if (product.isEmpty()) return false;
+        delete(product.get());
+        return true;
+    }
+
+    private Optional<Product> findFirst(List<? extends Product> matches) {
+        return matches.isEmpty() ? Optional.empty() : Optional.of(matches.get(0));
+    }
+
+    private <T extends Product> List<T> findByType(
+            Class<T> type,
+            Long id,
+            String sku,
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
+        EntityManager em = getEntityManager();
+        try {
+            CriteriaBuilder builder = em.getCriteriaBuilder();
+            CriteriaQuery<T> criteria = builder.createQuery(type);
+            Root<T> product = criteria.from(type);
+            product.fetch("brand", JoinType.INNER);
+            product.fetch("images", JoinType.LEFT);
+            product.fetch("warrantyPolicy", JoinType.LEFT);
+
+            List<Predicate> filters = new ArrayList<>();
+            if (id != null) filters.add(builder.equal(product.get("id"), id));
+            if (sku != null) filters.add(builder.equal(product.get("sku"), sku));
+            if (keyword != null && !keyword.isBlank()) {
+                String pattern = "%" + keyword.trim().toLowerCase() + "%";
+                filters.add(builder.or(
+                        builder.like(builder.lower(product.get("name")), pattern),
+                        builder.like(builder.lower(product.get("sku")), pattern)
+                ));
+            }
+            if (category != null) filters.add(builder.equal(product.get("category"), category));
+            if (brandId != null) filters.add(builder.equal(product.get("brand").get("id"), brandId));
+            if (minPrice != null) filters.add(builder.greaterThanOrEqualTo(product.get("price"), minPrice));
+            if (maxPrice != null) filters.add(builder.lessThanOrEqualTo(product.get("price"), maxPrice));
+
+            criteria.select(product).distinct(true).where(filters.toArray(Predicate[]::new));
+            return em.createQuery(criteria).getResultList();
         } finally {
             em.close();
         }
@@ -177,6 +161,17 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
     private boolean hasReference(EntityManager em, String entityName, Long productId) {
         Long count = em.createQuery(
                         "SELECT COUNT(e) FROM " + entityName + " e WHERE e.product.id = :productId",
+                        Long.class
+                )
+                .setParameter("productId", productId)
+                .getSingleResult();
+        return count > 0;
+    }
+
+    private boolean hasLineItemReference(EntityManager em, Long productId) {
+        Long count = em.createQuery(
+                        "SELECT COUNT(item) FROM LineItem item "
+                                + "WHERE item.product.id = :productId",
                         Long.class
                 )
                 .setParameter("productId", productId)

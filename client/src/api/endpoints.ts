@@ -41,6 +41,7 @@ export const apiEndpoints = {
     byId: (id: number | string) => `/api/brands/${id}`,
   },
   reviews: "/api/reviews",
+  coupons: "/api/coupons",
   warrantyPolicies: {
     list: "/api/warranty-policies",
     byId: (id: number | string) => `/api/warranty-policies/${id}`,

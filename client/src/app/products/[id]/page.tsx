@@ -12,16 +12,34 @@ export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getProductById(params.id), getReviewsByProduct(params.id)])
-      .then(([result, reviews]) => {
+    Promise.all([
+      getProductById(params.id),
+      getReviewsByProduct(params.id).catch((requestError: unknown) => {
         if (!cancelled) {
-          const productReviews: ProductReview[] = reviews
+          setReviewsError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Không thể tải đánh giá.",
+          );
+        }
+        return [];
+      }),
+    ])
+      .then(([result, apiReviews]) => {
+        if (!cancelled) {
+          const reviews: ProductReview[] = apiReviews
             .filter((review) => !review.isHidden)
-            .map(({ rating, content }) => ({ rating, content }));
-          setProduct({ ...result, reviews: productReviews });
+            .map(({ id, reviewerName, rating, content }) => ({
+              id,
+              reviewerName,
+              rating,
+              content,
+            }));
+          setProduct({ ...result, reviews });
         }
       })
       .catch((requestError: unknown) => {
@@ -53,5 +71,11 @@ export default function ProductDetailPage() {
     return <main className="mx-auto max-w-7xl px-5 py-16 text-text-muted" role="status">Đang tải sản phẩm...</main>;
   }
 
-  return <ProductDetail product={product} />;
+  return (
+    <ProductDetail
+      key={product.id}
+      product={product}
+      reviewsError={reviewsError}
+    />
+  );
 }
