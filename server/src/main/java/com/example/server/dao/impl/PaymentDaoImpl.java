@@ -1,50 +1,29 @@
 package com.example.server.dao.impl;
 
+import com.example.server.dao.BaseDao;
+import com.example.server.dao.PaymentDao;
 import com.example.server.model.Payment;
-import com.example.server.util.DBConnection;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 
-public class PaymentDAOImpl {
+import java.util.List;
+import java.util.Optional;
 
-    // 1. Lưu mới một giao dịch (Create)
-    public void save(Payment payment) {
-        EntityManager em = DBConnection.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        try {
-            tx.begin();
-            em.persist(payment);
-            tx.commit();
-        } catch (Exception e) {
-            if (tx.isActive()) tx.rollback();
-            e.printStackTrace();
-        } finally {
-            if (em != null) em.close();
-        }
+public class PaymentDaoImpl extends BaseDao<Payment, Long> implements PaymentDao {
+
+    public PaymentDaoImpl() {
+        super(Payment.class);
     }
 
-    public void update(Payment payment) {
-        EntityManager em = DBConnection.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        try {
-            tx.begin();
-            // Hàm merge() của JPA sẽ cập nhật dữ liệu của entity xuống DB
-            em.merge(payment);
-            tx.commit();
-        } catch (Exception e) {
-            if (tx.isActive()) tx.rollback();
-            e.printStackTrace();
-        } finally {
-            if (em != null) em.close();
-        }
-    }
-
-    // 3. Tìm Payment theo ID đơn hàng bằng Criteria API
+    @Override
     public Payment findByOrderId(Long orderId) {
-        EntityManager em = DBConnection.getEntityManager();
+        if (orderId == null) {
+            return null;
+        }
+        EntityManager em = getEntityManager();
         try {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<Payment> cq = cb.createQuery(Payment.class);
@@ -52,25 +31,37 @@ public class PaymentDAOImpl {
 
             cq.where(cb.equal(root.get("order").get("id"), orderId));
 
-            return em.createQuery(cq).getResultStream().findFirst().orElse(null);
+            TypedQuery<Payment> query = em.createQuery(cq);
+            List<Payment> results = query.getResultList();
+            return results.isEmpty() ? null : results.get(0);
         } finally {
-            if (em != null) em.close();
+            em.close();
         }
     }
 
-    // 4. Tìm Payment theo Mã thanh toán (paymentCode) bằng Criteria API
+    @Override
+    public Optional<Payment> findOptionalByOrderId(Long orderId) {
+        return Optional.ofNullable(findByOrderId(orderId));
+    }
+
+    @Override
     public Payment findByPaymentCode(String paymentCode) {
-        EntityManager em = DBConnection.getEntityManager();
+        if (paymentCode == null || paymentCode.trim().isEmpty()) {
+            return null;
+        }
+        EntityManager em = getEntityManager();
         try {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<Payment> cq = cb.createQuery(Payment.class);
             Root<Payment> root = cq.from(Payment.class);
 
-            cq.where(cb.equal(root.get("paymentCode"), paymentCode));
+            cq.where(cb.equal(root.get("paymentCode"), paymentCode.trim()));
 
-            return em.createQuery(cq).getResultStream().findFirst().orElse(null);
+            TypedQuery<Payment> query = em.createQuery(cq);
+            List<Payment> results = query.getResultList();
+            return results.isEmpty() ? null : results.get(0);
         } finally {
-            if (em != null) em.close();
+            em.close();
         }
     }
 }

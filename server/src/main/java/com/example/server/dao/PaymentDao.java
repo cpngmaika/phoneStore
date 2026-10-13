@@ -4,13 +4,11 @@ import com.example.server.model.Payment;
 
 import java.util.Optional;
 
-public class PaymentDao extends BaseDao<Payment, Long> {
+public interface PaymentDao extends GenericDao<Payment, Long> {
 
-    public PaymentDao() {
-        super(Payment.class);
-    }
+    Payment findByOrderId(Long orderId);
 
-    public Optional<Payment> findByOrderId(Long orderId) {
-        return Optional.empty();
-    }
+    Optional<Payment> findOptionalByOrderId(Long orderId);
+
+    Payment findByPaymentCode(String paymentCode);
 }

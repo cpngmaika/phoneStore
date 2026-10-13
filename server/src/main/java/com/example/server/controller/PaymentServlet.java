@@ -1,11 +1,16 @@
 package com.example.server.controller;
 
-import com.example.server.dao.impl.OrderDAOImpl;
-import com.example.server.dao.impl.PaymentDAOImpl;
+import com.example.server.dao.OrderDao;
+import com.example.server.dao.PaymentDao;
+import com.example.server.dao.impl.OrderDaoImpl;
+import com.example.server.dao.impl.PaymentDaoImpl;
 import com.example.server.model.Order;
 import com.example.server.model.Payment;
+import com.example.server.model.User;
 import com.example.server.model.enums.OrderStatus;
 import com.example.server.model.enums.PaymentMethod;
+import com.example.server.util.JpaUtil;
+import com.example.server.util.SessionUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -21,7 +26,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,8 +36,8 @@ import java.util.regex.Pattern;
 public class PaymentServlet extends HttpServlet {
     private static final Pattern PAYMENT_CODE_PATTERN = Pattern.compile("PAY[A-Za-z0-9]{8}");
 
-    private final OrderDAOImpl orderDAO = new OrderDAOImpl();
-    private final PaymentDAOImpl paymentDAO = new PaymentDAOImpl();
+    private final OrderDao orderDAO = new OrderDaoImpl();
+    private final PaymentDao paymentDAO = new PaymentDaoImpl();
     private final Dotenv dotenv = Dotenv.configure()
             .directory("C:/Users/hp/projects/app/phoneStore/server")
             .load();
@@ -51,9 +55,21 @@ public class PaymentServlet extends HttpServlet {
                 return;
             }
 
+            User currentUser = SessionUtil.getLoggedInUser(req);
+            if (currentUser == null) {
+                writeError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                return;
+            }
+
             Long orderId = parseOrderId(req);
             if (orderId == null) {
                 writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid orderId");
+                return;
+            }
+
+            Order order = orderDAO.findById(orderId);
+            if (order == null || order.getUser() == null || !currentUser.getId().equals(order.getUser().getId())) {
+                writeError(resp, HttpServletResponse.SC_NOT_FOUND, "Order not found");
                 return;
             }
 
@@ -63,7 +79,15 @@ public class PaymentServlet extends HttpServlet {
                 return;
             }
 
-            writeJson(resp, HttpServletResponse.SC_OK, payment);
+            Map<String, Object> responseBody = new LinkedHashMap<>();
+            responseBody.put("id", payment.getId());
+            responseBody.put("orderId", orderId);
+            responseBody.put("method", payment.getMethod());
+            responseBody.put("amount", payment.getAmount());
+            responseBody.put("paidAt", payment.getPaidAt());
+            responseBody.put("paymentCode", payment.getPaymentCode());
+
+            writeJson(resp, HttpServletResponse.SC_OK, responseBody);
         } catch (Exception e) {
             writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Could not check payment");
         }
@@ -72,14 +96,6 @@ public class PaymentServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         prepareJsonResponse(resp);
-
-        System.out.println("========== PAYMENT SERVLET ==========");
-        System.out.println("URI      = " + req.getRequestURI());
-        System.out.println("Context  = " + req.getContextPath());
-        System.out.println("Servlet  = " + req.getServletPath());
-        System.out.println("PathInfo = " + req.getPathInfo());
-        System.out.println("Method   = " + req.getMethod());
-        System.out.println("====================================");
 
         String pathInfo = req.getPathInfo();
         if ("/create".equals(pathInfo)) {
@@ -101,65 +117,61 @@ public class PaymentServlet extends HttpServlet {
     ) throws IOException {
 
         try {
-            Long orderId = parseOrderId(req);
+            User currentUser = SessionUtil.getLoggedInUser(req);
+            if (currentUser == null) {
+                writeError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                return;
+            }
 
+            Long orderId = parseOrderId(req);
             if (orderId == null) {
-                writeError(resp, 400, "Invalid orderId");
+                writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid orderId");
                 return;
             }
 
             Order order = orderDAO.findById(orderId);
-
-            if (order == null) {
-                writeError(resp, 404, "Order not found");
+            if (order == null || order.getUser() == null || !currentUser.getId().equals(order.getUser().getId())) {
+                writeError(resp, HttpServletResponse.SC_NOT_FOUND, "Order not found");
                 return;
             }
 
             Payment existingPayment = paymentDAO.findByOrderId(orderId);
-
             if (existingPayment != null) {
                 Map<String, Object> responseBody = new LinkedHashMap<>();
-
-                System.out.println( existingPayment);
                 responseBody.put("paymentCode", existingPayment.getPaymentCode());
                 responseBody.put("amount", existingPayment.getAmount());
                 responseBody.put("qrUrl", buildSepayQrUrl(existingPayment));
 
-                writeJson(resp, 200, responseBody);
+                writeJson(resp, HttpServletResponse.SC_OK, responseBody);
                 return;
             }
 
-            Payment payment = new Payment();
-
-            payment.setOrder(order);
-            payment.setMethod(PaymentMethod.BANK_TRANSFER);
-            //// SUA SAU OKE
-            payment.setAmount(new BigDecimal("4000"));
-            payment.setPaidAt(null);
+            BigDecimal amount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+            Payment payment = new Payment(
+                    order,
+                    PaymentMethod.BANK_TRANSFER,
+                    amount
+            );
             payment.setPaymentCode(generatePaymentCode());
 
             paymentDAO.save(payment);
 
             Map<String, Object> response = new LinkedHashMap<>();
-
             response.put("paymentCode", payment.getPaymentCode());
             response.put("amount", payment.getAmount());
             response.put("qrUrl", buildSepayQrUrl(payment));
-            System.out.println(response);
 
-            writeJson(resp, 200, response);
+            writeJson(resp, HttpServletResponse.SC_OK, response);
 
         } catch (Exception e) {
             e.printStackTrace();
-            writeError(resp, 500, "Could not create payment");
+            writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Could not create payment");
         }
     }
-   
 
     private void handleSepayWebhook(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String webhookToken = getEnv("SEPAY_WEBHOOK_TOKEN", null);
         String authorization = req.getHeader("Authorization");
-        System.out.println(authorization);
 
         if (webhookToken == null || authorization == null || !authorization.equals(webhookToken)) {
             writeError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
@@ -183,17 +195,20 @@ public class PaymentServlet extends HttpServlet {
                 return;
             }
 
-            payment.setPaidAt(LocalDateTime.now());
-            paymentDAO.update(payment);
+            JpaUtil.executeInTransaction(em -> {
+                Payment managedPayment = em.find(Payment.class, payment.getId());
+                if (managedPayment == null) {
+                    throw new IllegalStateException("Payment not found");
+                }
+                managedPayment.markAsPaid();
 
-            Order order = orderDAO.findById(payment.getOrder().getId());
-            if (order == null) {
-                writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Order not found");
-                return;
-            }
-
-            order.setStatus(OrderStatus.CONFIRMED);
-            orderDAO.update(order);
+                Order managedOrder = em.find(Order.class, managedPayment.getOrder().getId());
+                if (managedOrder == null) {
+                    throw new IllegalStateException("Order not found");
+                }
+                managedOrder.setStatus(OrderStatus.CONFIRMED);
+                return null;
+            });
 
             writeJson(resp, HttpServletResponse.SC_OK, Map.of("success", true));
         } catch (Exception e) {
