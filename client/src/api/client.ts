@@ -1,6 +1,16 @@
-const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/server_war_exploded"
-).replace(/\/+$/, "");
+const candidateBases = Array.from(
+  new Set(
+    [
+      process.env.NEXT_PUBLIC_API_URL,
+      "http://localhost:8080",
+      "http://localhost:8080/server_war_exploded",
+    ]
+      .filter((url): url is string => Boolean(url))
+      .map((url) => url.replace(/\/+$/, "")),
+  ),
+);
+
+let cachedBaseUrl: string | null = null;
 
 export async function apiClient<T>(
   endpoint: string,
@@ -18,50 +28,90 @@ export async function apiClient<T>(
   }
 
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-  const responseText = await response.text();
 
-  if (!response.ok) {
-    let detail = responseText;
+  const basesToTry = cachedBaseUrl
+    ? [cachedBaseUrl, ...candidateBases.filter((b) => b !== cachedBaseUrl)]
+    : candidateBases;
 
-    if (responseText) {
-      try {
-        const body: unknown = JSON.parse(responseText);
-        if (
-          typeof body === "object" &&
-          body !== null &&
-          "message" in body &&
-          typeof body.message === "string"
-        ) {
-          detail = body.message;
-        }
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) {
-          throw error;
-        }
+  let lastError: Error | null = null;
+
+  for (const baseUrl of basesToTry) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        ...options,
+        credentials: "include",
+        headers,
+      });
+
+      const responseText = await response.text();
+
+      // If Tomcat returned an HTML 404 page ("The requested resource is not available"),
+      // try the alternative base URL (e.g. "/" vs "/server_war_exploded")
+      if (
+        response.status === 404 &&
+        (responseText.includes("Apache Tomcat") ||
+          responseText.includes("The requested resource") ||
+          responseText.includes("<!doctype html>"))
+      ) {
+        lastError = new Error(
+          `API request failed (404): The requested resource [${baseUrl}${path}] is not available.`,
+        );
+        continue;
       }
+
+      if (!response.ok) {
+        let detail = responseText;
+
+        if (responseText) {
+          try {
+            const body: unknown = JSON.parse(responseText);
+            if (
+              typeof body === "object" &&
+              body !== null &&
+              "message" in body &&
+              typeof body.message === "string"
+            ) {
+              detail = body.message;
+            }
+          } catch {
+            // Keep original response text as detail
+          }
+        }
+
+        throw new Error(
+          `API request failed (${response.status})${detail ? `: ${detail}` : ""}`,
+        );
+      }
+
+      // Successful connection, cache working base URL
+      cachedBaseUrl = baseUrl;
+
+      if (!responseText) {
+        return undefined;
+      }
+
+      try {
+        return JSON.parse(responseText) as T;
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new Error("API returned an invalid JSON response.");
+        }
+
+        throw error;
+      }
+    } catch (error) {
+      if (
+        error instanceof TypeError &&
+        (error.message.includes("fetch failed") ||
+          error.message.includes("Failed to fetch"))
+      ) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
     }
-
-    throw new Error(
-      `API request failed (${response.status})${detail ? `: ${detail}` : ""}`,
-    );
   }
 
-  if (!responseText) {
-    return undefined;
-  }
-
-  try {
-    return JSON.parse(responseText) as T;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error("API returned an invalid JSON response.");
-    }
-
-    throw error;
-  }
+  throw lastError ?? new Error("Không thể kết nối đến máy chủ API.");
 }
