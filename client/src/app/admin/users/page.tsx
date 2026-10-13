@@ -140,7 +140,9 @@ export default function AdminUsersPage() {
    */
   async function createUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    // Lưu tham chiếu form trước khi thực hiện gọi hàm async (tránh event.currentTarget bị null sau await)
+    const form = event.currentTarget;
+    const data = new FormData(form);
     setBusy(true);
     setError(null);
 
@@ -155,7 +157,7 @@ export default function AdminUsersPage() {
       });
 
       // Đặt lại các trường nhập liệu trong form về mặc định
-      event.currentTarget.reset();
+      form.reset();
 
       // Tải lại bảng danh sách người dùng để hiển thị tài khoản vừa thêm
       await loadUsers();

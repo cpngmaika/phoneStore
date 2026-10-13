@@ -156,7 +156,9 @@ export default function ProfilePage() {
    */
   async function saveAddress(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    // Lưu tham chiếu form trước khi gọi hàm async
+    const form = event.currentTarget;
+    const data = new FormData(form);
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -172,7 +174,7 @@ export default function ProfilePage() {
         streetDetail: String(data.get("streetDetail")),
         isDefault: data.get("isDefault") === "on",
       });
-      event.currentTarget.reset();
+      form.reset();
       // Tải lại danh sách địa chỉ mới nhất
       await load();
       setMessage("Địa chỉ giao hàng mới đã được thêm thành công.");
