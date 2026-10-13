@@ -1,195 +1,122 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/modules/auth/auth.context";
-import {
-  adminUserService,
-  type UserFilterParams,
-} from "@/modules/admin/admin-user.service";
-import { Button } from "@/components/ui/Button";
-import type { AdminUser, UserStatus } from "@/types/user.types";
-import { UserFilterBar } from "./_components/UserFilterBar";
-import { UserTable } from "./_components/UserTable";
-import { CreateUserModal } from "./_components/CreateUserModal";
-import { EditUserModal } from "./_components/EditUserModal";
+import Link from "next/link";
+import { createAdminUser, getAdminUsers, toggleAdminUserStatus } from "@/api/admin.service";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import type { ApiUser } from "@/types/user.types";
 
 export default function AdminUsersPage() {
-  const router = useRouter();
-  const { user: currentAdmin, loading: authLoading } = useAuth();
-
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: checkingUser } = useCurrentUser();
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  // Filters
-  const [keyword, setKeyword] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-
-  // Modals state
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-
-  // Fetch Users
-  const fetchUsers = useCallback(async (params?: UserFilterParams) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const list = await adminUserService.getUsers(params);
-      setUsers(list);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Không thể tải danh sách.");
-    } finally {
-      setLoading(false);
-    }
+  const loadUsers = useCallback(async () => {
+    const result = await getAdminUsers();
+    setUsers(result);
   }, []);
 
-  const refreshUsersWithFilters = useCallback(() => {
-    void fetchUsers({
-      keyword: keyword.trim() || undefined,
-      role: roleFilter || undefined,
-      status: statusFilter || undefined,
-    });
-  }, [fetchUsers, keyword, roleFilter, statusFilter]);
-
   useEffect(() => {
-    let ignore = false;
-    if (!authLoading) {
-      if (!currentAdmin || currentAdmin.role !== "ADMIN") {
-        router.push("/login");
-      } else {
-        adminUserService
-          .getUsers()
-          .then((list) => {
-            if (!ignore) {
-              setUsers(list);
-              setLoading(false);
-            }
-          })
-          .catch((err: unknown) => {
-            if (!ignore) {
-              setError(
-                err instanceof Error ? err.message : "Không thể tải danh sách.",
-              );
-              setLoading(false);
-            }
-          });
-      }
-    }
+    if (user?.role !== "ADMIN") return;
+    let cancelled = false;
+    getAdminUsers()
+      .then((result) => {
+        if (!cancelled) setUsers(result);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Không thể tải người dùng.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingUsers(false);
+      });
     return () => {
-      ignore = true;
+      cancelled = true;
     };
-  }, [authLoading, currentAdmin, router]);
+  }, [user]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    refreshUsersWithFilters();
-  };
-
-  const handleResetSearch = () => {
-    setKeyword("");
-    setRoleFilter("");
-    setStatusFilter("");
-    void fetchUsers();
-  };
-
-  const openEditModal = (user: AdminUser) => {
-    setEditingUser(user);
-    setIsEditOpen(true);
-  };
-
-  const handleToggleStatus = async (user: AdminUser) => {
-    const nextStatus: UserStatus =
-      user.status === "ACTIVE" ? "LOCKED" : "ACTIVE";
-    const confirmMsg =
-      nextStatus === "LOCKED"
-        ? `Bạn có chắc muốn KHÓA tài khoản ${user.email}?`
-        : `Bạn có chắc muốn MỞ KHÓA tài khoản ${user.email}?`;
-
-    if (!confirm(confirmMsg)) return;
-
+  async function createUser(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError(null);
     try {
-      await adminUserService.toggleStatus(user.id, nextStatus);
-      refreshUsersWithFilters();
-    } catch (err: unknown) {
-      alert(
-        err instanceof Error ? err.message : "Thay đổi trạng thái thất bại.",
-      );
+      await createAdminUser({
+        fullName: String(data.get("fullName")),
+        email: String(data.get("email")),
+        password: String(data.get("password")),
+        role: String(data.get("role")) as ApiUser["role"],
+        phone: String(data.get("phone")),
+      });
+      event.currentTarget.reset();
+      await loadUsers();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể tạo tài khoản.");
+    } finally {
+      setBusy(false);
     }
-  };
-
-  if (authLoading || !currentAdmin || currentAdmin.role !== "ADMIN") {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-text-muted">Đang kiểm tra quyền Admin...</div>
-      </div>
-    );
   }
 
+  async function toggleStatus(target: ApiUser) {
+    const status = target.status === "LOCKED" ? "ACTIVE" : "LOCKED";
+    setError(null);
+    try {
+      const updated = await toggleAdminUserStatus(target.id, status);
+      setUsers((current) => current.map((item) => (item.id === target.id ? updated : item)));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể cập nhật tài khoản.");
+    }
+  }
+
+  if (checkingUser) return <main className="mx-auto max-w-6xl px-5 py-16 text-text-muted" role="status">Đang kiểm tra quyền truy cập...</main>;
+  if (user?.role !== "ADMIN") return <main className="mx-auto max-w-6xl px-5 py-16"><p role="alert" className="text-red-700">Bạn cần quyền quản trị.</p><Link href="/login" className="text-primary">Đăng nhập</Link></main>;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Page Title */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Quản lý người dùng</h1>
-          <p className="text-sm text-text-muted">
-            Quản trị viên có thể xem danh sách, lọc, tạo tài khoản nhân viên và khóa/mở tài khoản.
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          + Thêm tài khoản mới
-        </Button>
+    <main className="mx-auto max-w-6xl space-y-7 px-5 py-10 sm:px-8">
+      <div>
+        <Link href="/admin" className="text-sm font-semibold text-primary">← Quản trị</Link>
+        <h1 className="mt-3 text-3xl font-semibold text-text">Người dùng</h1>
       </div>
-
-      {/* Filter Bar */}
-      <UserFilterBar
-        keyword={keyword}
-        setKeyword={setKeyword}
-        roleFilter={roleFilter}
-        setRoleFilter={setRoleFilter}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        onSearch={handleSearch}
-        onReset={handleResetSearch}
-      />
-
-      {/* Error notification */}
-      {error && (
-        <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm font-medium text-red-600 border border-red-200">
-          {error}
+      {error ? <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
+      <form onSubmit={createUser} className="grid gap-3 rounded-xl border border-border bg-surface p-5 sm:grid-cols-2 lg:grid-cols-5">
+        <h2 className="font-semibold text-text sm:col-span-2 lg:col-span-5">Tạo tài khoản người dùng</h2>
+        <input name="fullName" required placeholder="Họ tên" className="h-10 rounded-lg border border-border px-3" />
+        <input name="email" required type="email" placeholder="Email" className="h-10 rounded-lg border border-border px-3" />
+        <input name="password" required type="password" placeholder="Mật khẩu" className="h-10 rounded-lg border border-border px-3" />
+        <input name="phone" placeholder="Điện thoại" className="h-10 rounded-lg border border-border px-3" />
+        <select name="role" className="h-10 rounded-lg border border-border px-3">
+          <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+          <option value="ADMIN">Quản trị viên (ADMIN)</option>
+        </select>
+        <button disabled={busy} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+          Tạo người dùng
+        </button>
+      </form>
+      <section className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 border-b border-border bg-surface-muted px-5 py-3 text-xs font-semibold uppercase text-text-muted">
+          <span>Tên</span>
+          <span>Email</span>
+          <span>Vai trò</span>
+          <span>Trạng thái</span>
         </div>
-      )}
-
-      {/* Table */}
-      <UserTable
-        users={users}
-        loading={loading}
-        onEdit={openEditModal}
-        onToggleStatus={handleToggleStatus}
-      />
-
-      {/* Modal Create */}
-      <CreateUserModal
-        open={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={refreshUsersWithFilters}
-      />
-
-      {/* Modal Edit */}
-      {editingUser && (
-        <EditUserModal
-          key={editingUser.id}
-          user={editingUser}
-          open={isEditOpen}
-          onClose={() => {
-            setIsEditOpen(false);
-            setEditingUser(null);
-          }}
-          onSuccess={refreshUsersWithFilters}
-        />
-      )}
-    </div>
+        {loadingUsers ? (
+          <p role="status" className="p-5 text-sm text-text-muted">Đang tải người dùng...</p>
+        ) : (
+          users.map((item) => (
+            <article key={item.id} className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-4 border-b border-border px-5 py-4 text-sm last:border-b-0">
+              <span className="font-medium text-text">{item.fullName}</span>
+              <span className="truncate text-text-muted">{item.email}</span>
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${item.role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-700"}`}>
+                {item.role}
+              </span>
+              <button type="button" onClick={() => toggleStatus(item)} className="font-semibold text-primary">
+                {item.status === "LOCKED" ? "Mở khóa" : "Khóa"}
+              </button>
+            </article>
+          ))
+        )}
+      </section>
+    </main>
   );
 }

@@ -1,5 +1,4 @@
-```java
-        package com.example.server.model;
+package com.example.server.model;
 
 import com.example.server.model.enums.OrderStatus;
 import jakarta.persistence.*;
@@ -52,6 +51,14 @@ public class Order {
             orphanRemoval = true
     )
     private List<LineItem> items = new ArrayList<>();
+
+    public Order() {
+    }
+
+    public Order(String orderNumber, User user) {
+        this.orderNumber = orderNumber;
+        this.user = user;
+    }
 
     // Them san pham vao don hang
     public void addLineItem(LineItem item) {
@@ -146,4 +153,3 @@ public class Order {
         this.items = items;
     }
 }
-```

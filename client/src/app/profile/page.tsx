@@ -1,105 +1,251 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/modules/auth/auth.context";
-import { ProfileHeader } from "./_components/ProfileHeader";
-import { ProfileInfoTab } from "./_components/ProfileInfoTab";
-import { ChangePasswordTab } from "./_components/ChangePasswordTab";
-import { AddressListTab } from "./_components/AddressListTab";
-
-type ActiveTab = "info" | "password" | "addresses";
+import Link from "next/link";
+import {
+  addAddress,
+  changePassword,
+  deleteAddress,
+  getAddresses,
+  getProfile,
+  updateProfile,
+} from "@/api/users.service";
+import type { ApiAddress, ApiUser } from "@/types/user.types";
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, loading: authLoading, refreshUser } = useAuth();
+  const [profile, setProfile] = useState<ApiUser | null>(null);
+  const [addresses, setAddresses] = useState<ApiAddress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize activeTab from window URL query (?tab=addresses) to persist across F5
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab") as ActiveTab | null;
-      if (tab === "password" || tab === "addresses" || tab === "info") {
-        return tab;
-      }
-    }
-    return "info";
-  });
-
-  const switchTab = (tab: ActiveTab) => {
-    setActiveTab(tab);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("tab", tab);
-      window.history.replaceState(null, "", url.toString());
-    }
-  };
+  async function load() {
+    const [currentProfile, currentAddresses] = await Promise.all([
+      getProfile(),
+      getAddresses(),
+    ]);
+    setProfile(currentProfile);
+    setAddresses(currentAddresses);
+  }
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
-    }
-  }, [authLoading, user, router]);
+    let cancelled = false;
+    Promise.all([getProfile(), getAddresses()])
+      .then(([currentProfile, currentAddresses]) => {
+        if (!cancelled) {
+          setProfile(currentProfile);
+          setAddresses(currentAddresses);
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Không thể tải hồ sơ.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (authLoading || !user) {
+  async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const updated = await updateProfile({
+        fullName: String(data.get("fullName")),
+        phone: String(data.get("phone")),
+      });
+      setProfile(updated);
+      setMessage("Thông tin hồ sơ đã được lưu.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể lưu hồ sơ.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleChangePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await changePassword({
+        oldPassword: String(data.get("oldPassword")),
+        newPassword: String(data.get("newPassword")),
+      });
+      form.reset();
+      setMessage("Đổi mật khẩu thành công.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể đổi mật khẩu.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveAddress(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await addAddress({
+        receiverName: String(data.get("receiverName")),
+        receiverPhone: String(data.get("receiverPhone")),
+        country: String(data.get("country")),
+        province: String(data.get("province")),
+        district: String(data.get("district")),
+        ward: String(data.get("ward")),
+        streetDetail: String(data.get("streetDetail")),
+        isDefault: data.get("isDefault") === "on",
+      });
+      event.currentTarget.reset();
+      await load();
+      setMessage("Địa chỉ giao hàng đã được thêm.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể thêm địa chỉ.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeAddress(id: number) {
+    setError(null);
+    try {
+      await deleteAddress(id);
+      setAddresses((current) => current.filter((address) => address.id !== id));
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể xóa địa chỉ.",
+      );
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-text-muted">Đang tải thông tin tài khoản...</div>
-      </div>
+      <main className="mx-auto max-w-4xl px-5 py-16 text-text-muted" role="status">
+        Đang tải hồ sơ...
+      </main>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      {/* Header Profile */}
-      <ProfileHeader user={user} />
-
-      {/* Tabs Navigation */}
-      <div className="flex gap-2 border-b border-border pb-4 mb-8">
-        <button
-          onClick={() => switchTab("info")}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-            activeTab === "info"
-              ? "bg-primary text-white"
-              : "bg-surface-muted text-text hover:bg-border/50"
-          }`}
-        >
-          Thông tin cá nhân
-        </button>
-        <button
-          onClick={() => switchTab("password")}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-            activeTab === "password"
-              ? "bg-primary text-white"
-              : "bg-surface-muted text-text hover:bg-border/50"
-          }`}
-        >
-          Đổi mật khẩu
-        </button>
-        <button
-          onClick={() => switchTab("addresses")}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-            activeTab === "addresses"
-              ? "bg-primary text-white"
-              : "bg-surface-muted text-text hover:bg-border/50"
-          }`}
-        >
-          Sổ địa chỉ
-        </button>
+    <main className="mx-auto max-w-4xl space-y-8 px-5 py-10 sm:px-8">
+      <div>
+        <p className="text-sm font-semibold text-primary">Tài khoản</p>
+        <h1 className="mt-2 text-3xl font-semibold text-text">Hồ sơ của tôi</h1>
+        {profile ? <p className="mt-2 text-sm text-text-muted">{profile.email}</p> : null}
       </div>
 
-      {/* Tab Contents */}
-      {activeTab === "info" && (
-        <ProfileInfoTab
-          key={`${user.id}-${user.avatarUrl || ""}`}
-          user={user}
-          refreshUser={refreshUser}
-        />
-      )}
+      {error ? <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
+      {message ? <p role="status" className="rounded-lg bg-green-50 p-4 text-sm text-green-800">{message}</p> : null}
 
-      {activeTab === "password" && <ChangePasswordTab />}
+      {/* Thông tin cá nhân */}
+      {profile ? (
+        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-border bg-surface p-6">
+          <h2 className="text-xl font-semibold text-text">Thông tin cá nhân</h2>
+          <label className="block text-sm font-medium text-text">
+            Họ và tên
+            <input name="fullName" required defaultValue={profile.fullName} className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary" />
+          </label>
+          <label className="block text-sm font-medium text-text">
+            Số điện thoại
+            <input name="phone" defaultValue={profile.phone ?? ""} className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary" />
+          </label>
+          <div className="flex items-center gap-4 pt-2">
+            <button disabled={busy} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+              Lưu hồ sơ
+            </button>
+            <Link href="/orders" className="text-sm font-semibold text-primary">
+              Xem đơn hàng
+            </Link>
+          </div>
+        </form>
+      ) : null}
 
-      {activeTab === "addresses" && <AddressListTab />}
-    </div>
+      {/* Đổi mật khẩu */}
+      <form onSubmit={handleChangePassword} className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <h2 className="text-xl font-semibold text-text">Đổi mật khẩu</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-text">
+            Mật khẩu hiện tại
+            <input name="oldPassword" type="password" required className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary" />
+          </label>
+          <label className="block text-sm font-medium text-text">
+            Mật khẩu mới
+            <input name="newPassword" type="password" required className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary" />
+          </label>
+        </div>
+        <button disabled={busy} className="rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-text hover:bg-surface-muted disabled:opacity-60">
+          Cập nhật mật khẩu
+        </button>
+      </form>
+
+      {/* Sổ địa chỉ */}
+      <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <h2 className="text-xl font-semibold text-text">Địa chỉ giao hàng</h2>
+        {addresses.length === 0 ? (
+          <p className="text-sm text-text-muted">Bạn chưa lưu địa chỉ nào.</p>
+        ) : (
+          addresses.map((address) => (
+            <article key={address.id} className="flex items-start justify-between gap-4 rounded-lg bg-surface-muted p-4">
+              <div className="text-sm text-text">
+                <p className="font-semibold">{address.receiverName} · {address.receiverPhone}</p>
+                <p className="mt-1 text-text-muted">{address.streetDetail}, {address.ward}, {address.district}, {address.province}, {address.country}</p>
+                {address.isDefault ? <span className="mt-2 inline-block text-xs font-semibold text-primary">Mặc định</span> : null}
+              </div>
+              <button type="button" onClick={() => removeAddress(address.id)} className="text-sm font-semibold text-primary">
+                Xóa
+              </button>
+            </article>
+          ))
+        )}
+
+        <form onSubmit={saveAddress} className="grid gap-3 border-t border-border pt-5 sm:grid-cols-2">
+          <h3 className="font-semibold text-text sm:col-span-2">Thêm địa chỉ mới</h3>
+          <input name="receiverName" required placeholder="Người nhận" className="h-11 rounded-lg border border-border px-3" />
+          <input name="receiverPhone" required placeholder="Số điện thoại" className="h-11 rounded-lg border border-border px-3" />
+          <input name="country" required placeholder="Quốc gia" defaultValue="Vietnam" className="h-11 rounded-lg border border-border px-3" />
+          <input name="province" required placeholder="Tỉnh / thành phố" className="h-11 rounded-lg border border-border px-3" />
+          <input name="district" required placeholder="Quận / huyện" className="h-11 rounded-lg border border-border px-3" />
+          <input name="ward" required placeholder="Phường / xã" className="h-11 rounded-lg border border-border px-3" />
+          <input name="streetDetail" required placeholder="Số nhà, tên đường" className="h-11 rounded-lg border border-border px-3 sm:col-span-2" />
+          <label className="flex items-center gap-2 text-sm text-text sm:col-span-2">
+            <input type="checkbox" name="isDefault" /> Đặt làm địa chỉ mặc định
+          </label>
+          <button disabled={busy} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60 sm:col-span-2 w-fit">
+            Thêm địa chỉ
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }

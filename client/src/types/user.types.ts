@@ -1,72 +1,51 @@
-import type { UserRole, UserStatus } from "./auth.types";
-export type { UserRole, UserStatus };
-
-export interface Address {
+export type ApiUser = {
   id: number;
-  userId?: number;
-  receiverName?: string;
-  recipientName?: string;
-  receiverPhone?: string;
-  phone?: string;
-  country?: string;
-  province: string;
-  district: string;
-  ward: string;
-  streetDetail?: string;
-  streetAddress?: string;
-  isDefault: boolean;
-  createdAt?: string;
-}
+  fullName: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  role: "CUSTOMER" | "ADMIN";
+  status: "ACTIVE" | "LOCKED" | "INACTIVE";
+};
 
-export interface AddressRequest {
-  receiverName?: string;
-  recipientName?: string;
-  receiverPhone?: string;
-  phone?: string;
-  country?: string;
-  province: string;
-  district: string;
-  ward: string;
-  streetDetail?: string;
-  streetAddress?: string;
-  isDefault?: boolean;
-}
-
-export interface UpdateProfileRequest {
+export type UpdateProfileRequest = {
   fullName: string;
   phone?: string;
   avatarUrl?: string;
-}
+};
 
-export interface ChangePasswordRequest {
+export type ChangePasswordRequest = {
   oldPassword: string;
   newPassword: string;
-}
+};
 
-export interface AdminUser {
+export type ApiAddress = {
   id: number;
-  email: string;
-  fullName: string;
-  phone?: string;
-  role: UserRole;
-  status: UserStatus;
-  avatarUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+  receiverName: string;
+  receiverPhone: string;
+  country: string;
+  province: string;
+  district: string;
+  ward: string;
+  streetDetail: string;
+  isDefault: boolean;
+};
 
-export interface AdminCreateUserRequest {
+export type AddressRequest = Omit<ApiAddress, "id">;
+
+export type AdminUserCreateRequest = {
   fullName: string;
   email: string;
   password: string;
   phone?: string;
-  role: UserRole;
-}
+  avatarUrl?: string;
+  role?: ApiUser["role"];
+};
 
-export interface AdminUpdateUserRequest {
+export type AdminUserUpdateRequest = {
   fullName?: string;
   phone?: string;
-  role?: UserRole;
-  status?: UserStatus;
   avatarUrl?: string;
-}
+  role?: ApiUser["role"];
+  status?: ApiUser["status"];
+};

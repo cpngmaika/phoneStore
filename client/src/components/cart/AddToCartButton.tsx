@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { useCart } from "@/modules/cart/cart.hooks";
+import { useCart } from "@/hooks/cart.hooks";
 import type { Product } from "@/types/product.types";
 
 export function AddToCartButton({ product }: { product: Product }) {

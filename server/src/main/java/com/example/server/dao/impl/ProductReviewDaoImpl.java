@@ -24,10 +24,32 @@ public class ProductReviewDaoImpl extends BaseDao<ProductReview, Long> implement
     public List<ProductReview> findByProductId(Long productId) {
         EntityManager em = getEntityManager();
         try {
-            String jpql = "SELECT r FROM ProductReview r WHERE r.product.id = :productId";
+            String jpql = "SELECT r FROM ProductReview r "
+                    + "JOIN FETCH r.reviewer "
+                    + "JOIN FETCH r.product "
+                    + "WHERE r.product.id = :productId";
             TypedQuery<ProductReview> query = em.createQuery(jpql, ProductReview.class);
             query.setParameter("productId", productId);
             return query.getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public boolean existsByReviewerAndProduct(Long reviewerId, Long productId) {
+        EntityManager em = getEntityManager();
+        try {
+            Long count = em.createQuery(
+                            "SELECT COUNT(r) FROM ProductReview r "
+                                    + "WHERE r.reviewer.id = :reviewerId "
+                                    + "AND r.product.id = :productId",
+                            Long.class
+                    )
+                    .setParameter("reviewerId", reviewerId)
+                    .setParameter("productId", productId)
+                    .getSingleResult();
+            return count > 0;
         } finally {
             em.close();
         }

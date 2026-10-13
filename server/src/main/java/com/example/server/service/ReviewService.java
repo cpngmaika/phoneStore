@@ -28,6 +28,10 @@ public class ReviewService {
     }
 
     public ReviewResponse createReview(Long userId, ReviewCreateRequest request) {
+        if (request == null || request.getProductId() == null) {
+            throw new AppException("Vui lòng chọn sản phẩm để đánh giá.");
+        }
+
         User user = userDao.findById(userId);
         if (user == null) {
             throw new AppException("User not found");
@@ -35,6 +39,10 @@ public class ReviewService {
 
         Product product = productDao.findOptionalById(request.getProductId())
                 .orElseThrow(() -> new AppException("Product not found"));
+
+        if (reviewDao.existsByReviewerAndProduct(userId, request.getProductId())) {
+            throw new AppException("Bạn chỉ có thể đánh giá sản phẩm này một lần.");
+        }
 
         ProductReview review = new ProductReview(user, product, request.getRating(), request.getContent());
         reviewDao.save(review);

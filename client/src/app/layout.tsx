@@ -2,25 +2,26 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { CartProvider } from "@/modules/cart/cart.hooks";
-import { AuthProvider } from "@/modules/auth/auth.context";
+import { CartProvider } from "@/hooks/cart.hooks";
 
 export const metadata: Metadata = {
   title: "PhoneStore",
-  description: "A clean electronics storefront for phones, tablets, and accessories.",
+  description: "Khám phá điện thoại, máy tính bảng và phụ kiện tại PhoneStore.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="vi" className="h-full antialiased">
       <body className="min-h-full">
-        <AuthProvider>
-          <CartProvider>
-            <Header />
-            {children}
-            <Footer />
-          </CartProvider>
-        </AuthProvider>
+        <CartProvider>
+          <Header />
+          {children}
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );
