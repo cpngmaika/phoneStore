@@ -58,9 +58,7 @@ export function UserTable({
                     className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       item.role === "ADMIN"
                         ? "bg-purple-100 text-purple-700"
-                        : item.role === "STAFF"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-slate-100 text-slate-700"
+                        : "bg-slate-100 text-slate-700"
                     }`}
                   >
                     {item.role}

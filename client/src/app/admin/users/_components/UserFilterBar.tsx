@@ -44,7 +44,6 @@ export function UserFilterBar({
       >
         <option value="">Tất cả vai trò</option>
         <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
-        <option value="STAFF">Nhân viên (STAFF)</option>
         <option value="ADMIN">Quản trị viên (ADMIN)</option>
       </select>
 

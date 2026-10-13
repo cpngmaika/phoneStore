@@ -29,7 +29,7 @@ export function CreateUserModal({
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
   const [createPhone, setCreatePhone] = useState("");
-  const [createRole, setCreateRole] = useState<UserRole>("STAFF");
+  const [createRole, setCreateRole] = useState<UserRole>("CUSTOMER");
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ export function CreateUserModal({
     setCreateEmail("");
     setCreatePassword("");
     setCreatePhone("");
-    setCreateRole("STAFF");
+    setCreateRole("CUSTOMER");
     setCreateError(null);
   };
 
@@ -163,9 +163,8 @@ export function CreateUserModal({
             onChange={(e) => setCreateRole(e.target.value as UserRole)}
             className="h-12 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text outline-none transition focus:border-primary"
           >
-            <option value="STAFF">Nhân viên (STAFF)</option>
-            <option value="ADMIN">Quản trị viên (ADMIN)</option>
             <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+            <option value="ADMIN">Quản trị viên (ADMIN)</option>
           </select>
         </div>
 

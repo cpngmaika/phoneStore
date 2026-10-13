@@ -118,7 +118,6 @@ export function EditUserModal({
             className="h-12 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text outline-none transition focus:border-primary"
           >
             <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
-            <option value="STAFF">Nhân viên (STAFF)</option>
             <option value="ADMIN">Quản trị viên (ADMIN)</option>
           </select>
         </div>

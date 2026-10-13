@@ -148,7 +148,7 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists: " + req.getEmail());
         }
 
-        Role role = req.getRole() != null ? req.getRole() : Role.STAFF;
+        Role role = req.getRole() != null ? req.getRole() : Role.CUSTOMER;
         String hashedPassword = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt());
 
         User newUser = new User(
