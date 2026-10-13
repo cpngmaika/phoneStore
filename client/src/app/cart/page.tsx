@@ -35,7 +35,7 @@ export default function CartPage() {
         ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
       });
       clearCart();
-      router.push(`/orders/${order.id}`);
+      router.push(`/checkout/qr?orderId=${order.id}`);
     } catch (requestError) {
       setError(
         requestError instanceof Error

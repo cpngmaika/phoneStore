@@ -1,6 +1,7 @@
 package com.example.server.dto.order;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class OrderItemResponse {
     private Long productId;
@@ -8,6 +9,8 @@ public class OrderItemResponse {
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
+    private String imageUrl;
+    private List<String> images;
 
     public OrderItemResponse() {
     }
@@ -26,4 +29,10 @@ public class OrderItemResponse {
 
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public List<String> getImages() { return images; }
+    public void setImages(List<String> images) { this.images = images; }
 }

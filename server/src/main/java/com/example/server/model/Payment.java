@@ -23,6 +23,10 @@ public class Payment {
     @Column(name = "method", nullable = false, length = 30)
     private PaymentMethod method;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private com.example.server.model.enums.PaymentStatus status = com.example.server.model.enums.PaymentStatus.PENDING;
+
     @Column(
             name = "amount",
             nullable = false,
@@ -38,7 +42,7 @@ public class Payment {
     @Column(name = "payment_code", unique = true)
     private String paymentCode;
 
-    protected Payment() {
+    public Payment() {
     }
 
     public Payment(
@@ -49,9 +53,11 @@ public class Payment {
         this.order = order;
         this.method = method;
         this.amount = amount;
+        this.status = com.example.server.model.enums.PaymentStatus.PENDING;
     }
 
     public void markAsPaid() {
+        this.status = com.example.server.model.enums.PaymentStatus.SUCCESS;
         this.paidAt = LocalDateTime.now();
     }
 
@@ -97,5 +103,13 @@ public class Payment {
 
     public void setPaymentCode(String paymentCode) {
         this.paymentCode = paymentCode;
+    }
+
+    public com.example.server.model.enums.PaymentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(com.example.server.model.enums.PaymentStatus status) {
+        this.status = status;
     }
 }

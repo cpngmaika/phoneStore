@@ -45,4 +45,52 @@ public class ProductImageDaoImpl extends BaseDao<ProductImage, Long> implements 
             em.close();
         }
     }
+
+    @Override
+    public java.util.Map<Long, String> findPrimaryImageUrls(java.util.Collection<Long> productIds) {
+        java.util.Map<Long, String> map = new java.util.HashMap<>();
+        if (productIds == null || productIds.isEmpty()) {
+            return map;
+        }
+        EntityManager em = getEntityManager();
+        try {
+            String jpql = "SELECT img.product.id, img.imageUrl FROM ProductImage img "
+                    + "WHERE img.product.id IN :productIds "
+                    + "ORDER BY img.isPrimary DESC, img.sortOrder ASC, img.id ASC";
+            List<Object[]> rows = em.createQuery(jpql, Object[].class)
+                    .setParameter("productIds", productIds)
+                    .getResultList();
+            for (Object[] row : rows) {
+                map.putIfAbsent((Long) row[0], (String) row[1]);
+            }
+            return map;
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public java.util.Map<Long, List<String>> findAllImageUrls(java.util.Collection<Long> productIds) {
+        java.util.Map<Long, List<String>> map = new java.util.HashMap<>();
+        if (productIds == null || productIds.isEmpty()) {
+            return map;
+        }
+        EntityManager em = getEntityManager();
+        try {
+            String jpql = "SELECT img.product.id, img.imageUrl FROM ProductImage img "
+                    + "WHERE img.product.id IN :productIds "
+                    + "ORDER BY img.isPrimary DESC, img.sortOrder ASC, img.id ASC";
+            List<Object[]> rows = em.createQuery(jpql, Object[].class)
+                    .setParameter("productIds", productIds)
+                    .getResultList();
+            for (Object[] row : rows) {
+                Long pId = (Long) row[0];
+                String url = (String) row[1];
+                map.computeIfAbsent(pId, k -> new java.util.ArrayList<>()).add(url);
+            }
+            return map;
+        } finally {
+            em.close();
+        }
+    }
 }

@@ -1,7 +1,9 @@
 package com.example.server.controller;
 
 import com.example.server.dao.ProductDao;
+import com.example.server.dao.ProductImageDao;
 import com.example.server.dao.impl.ProductDaoImpl;
+import com.example.server.dao.impl.ProductImageDaoImpl;
 import com.example.server.dto.common.ApiResponse;
 import com.example.server.dto.order.OrderCreateRequest;
 import com.example.server.dto.order.OrderItemRequest;
@@ -24,6 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @WebServlet("/api/orders/*")
@@ -31,6 +34,7 @@ public class OrderServlet extends HttpServlet {
 
     private final OrderService orderService = new OrderService();
     private final ProductDao productDao = new ProductDaoImpl();
+    private final ProductImageDao productImageDao = new ProductImageDaoImpl();
 
     @Override
     protected void doGet(
@@ -56,11 +60,10 @@ public class OrderServlet extends HttpServlet {
             // Lấy danh sách đơn hàng của người dùng hiện tại.
             if (path == null || "/".equals(path)) {
 
-                List<OrderResponse> orders = orderService
-                        .layDonHangTheoNguoiDung(user.getId())
-                        .stream()
-                        .map(OrderServlet::toResponse)
-                        .toList();
+                List<OrderResponse> orders = toResponseList(
+                        orderService.layDonHangTheoNguoiDung(user.getId()),
+                        productImageDao
+                );
 
                 JsonUtil.sendJson(
                         resp,
@@ -95,7 +98,7 @@ public class OrderServlet extends HttpServlet {
                     HttpServletResponse.SC_OK,
                     ApiResponse.success(
                             "Order retrieved successfully",
-                            toResponse(order)
+                            toResponse(order, productImageDao)
                     )
             );
 
@@ -209,7 +212,7 @@ public class OrderServlet extends HttpServlet {
                     HttpServletResponse.SC_CREATED,
                     ApiResponse.success(
                             "Order created successfully",
-                            toResponse(order)
+                            toResponse(order, productImageDao)
                     )
             );
 
@@ -246,54 +249,64 @@ public class OrderServlet extends HttpServlet {
         }
     }
 
-    static OrderResponse toResponse(Order order) {
+    public static OrderResponse toResponse(Order order) {
+        return toResponse(order, new ProductImageDaoImpl());
+    }
 
-        OrderResponse response = new OrderResponse();
+    public static OrderResponse toResponse(Order order, ProductImageDao productImageDao) {
+        if (order == null) {
+            return null;
+        }
+        List<OrderResponse> responses = toResponseList(List.of(order), productImageDao);
+        return responses.isEmpty() ? null : responses.get(0);
+    }
 
-        response.setId(order.getId());
-        response.setOrderCode(order.getOrderNumber());
-        response.setStatus(order.getStatus());
-        response.setTotalAmount(order.getTotalAmount());
+    public static List<OrderResponse> toResponseList(List<Order> orders, ProductImageDao productImageDao) {
+        if (orders == null || orders.isEmpty()) {
+            return List.of();
+        }
 
-        response.setCouponCode(
-                order.getCoupon() == null
-                        ? null
-                        : order.getCoupon().getCode()
-        );
-
-        List<OrderItemResponse> items = order.getItems()
-                .stream()
-                .map(item -> {
-
-                    OrderItemResponse itemResponse =
-                            new OrderItemResponse();
-
-                    itemResponse.setProductId(
-                            item.getProduct().getId()
-                    );
-
-                    itemResponse.setProductName(
-                            item.getProduct().getName()
-                    );
-
-                    itemResponse.setQuantity(
-                            item.getQuantity()
-                    );
-
-                    itemResponse.setUnitPrice(
-                            item.getUnitPrice()
-                    );
-
-                    itemResponse.setSubtotal(
-                            item.getSubtotal()
-                    );
-
-                    return itemResponse;
-                })
+        List<Long> productIds = orders.stream()
+                .flatMap(o -> o.getItems().stream())
+                .filter(item -> item.getProduct() != null && item.getProduct().getId() != null)
+                .map(item -> item.getProduct().getId())
+                .distinct()
                 .toList();
 
-        response.setItems(items);
+        Map<Long, String> primaryImages = productImageDao != null
+                ? productImageDao.findPrimaryImageUrls(productIds)
+                : Map.of();
+        Map<Long, List<String>> allImages = productImageDao != null
+                ? productImageDao.findAllImageUrls(productIds)
+                : Map.of();
 
-        return response;
+        return orders.stream().map(order -> {
+            OrderResponse response = new OrderResponse();
+            response.setId(order.getId());
+            response.setOrderCode(order.getOrderNumber());
+            response.setStatus(order.getStatus());
+            response.setTotalAmount(order.getTotalAmount());
+            response.setCouponCode(
+                    order.getCoupon() == null ? null : order.getCoupon().getCode()
+            );
+
+            List<OrderItemResponse> items = order.getItems().stream().map(item -> {
+                OrderItemResponse itemResponse = new OrderItemResponse();
+                if (item.getProduct() != null) {
+                    Long pId = item.getProduct().getId();
+                    itemResponse.setProductId(pId);
+                    itemResponse.setProductName(item.getProduct().getName());
+                    itemResponse.setImageUrl(primaryImages.get(pId));
+                    itemResponse.setImages(allImages.getOrDefault(pId, List.of()));
+                }
+                itemResponse.setQuantity(item.getQuantity());
+                itemResponse.setUnitPrice(item.getUnitPrice());
+                itemResponse.setSubtotal(item.getSubtotal());
+                return itemResponse;
+            }).toList();
+
+            response.setItems(items);
+            return response;
+        }).toList();
     }
 }

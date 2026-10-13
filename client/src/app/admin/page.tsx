@@ -10,9 +10,6 @@ import type { ApiOrder, OrderStatus } from "@/types/order.types";
 const statuses: OrderStatus[] = [
   "PENDING",
   "CONFIRMED",
-  "PROCESSING",
-  "SHIPPING",
-  "DELIVERED",
   "CANCELLED",
 ];
 

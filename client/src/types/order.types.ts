@@ -1,10 +1,6 @@
-export type OrderStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "PROCESSING"
-  | "SHIPPING"
-  | "DELIVERED"
-  | "CANCELLED";
+export type OrderStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+
+export type PaymentStatus = "PENDING" | "SUCCESS";
 
 export type OrderItemRequest = {
   productId: number;
@@ -22,6 +18,8 @@ export type ApiOrderItem = {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  imageUrl?: string | null;
+  images?: string[];
 };
 
 export type ApiOrder = {
@@ -33,4 +31,16 @@ export type ApiOrder = {
   items: ApiOrderItem[];
 };
 
+export type ApiPayment = {
+  id?: number;
+  orderId?: number;
+  method?: string;
+  status: PaymentStatus;
+  amount: number;
+  paidAt?: string | null;
+  paymentCode: string;
+  qrUrl: string;
+};
+
 export type ApiAdminOrder = ApiOrder;
+

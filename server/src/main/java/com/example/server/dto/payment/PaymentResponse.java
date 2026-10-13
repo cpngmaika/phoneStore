@@ -13,6 +13,8 @@ public class PaymentResponse {
     private PaymentStatus status;
     private BigDecimal amount;
     private LocalDateTime paidAt;
+    private String paymentCode;
+    private String qrUrl;
 
     public PaymentResponse() {
     }
@@ -34,4 +36,11 @@ public class PaymentResponse {
 
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+
+    public String getPaymentCode() { return paymentCode; }
+    public void setPaymentCode(String paymentCode) { this.paymentCode = paymentCode; }
+
+    public String getQrUrl() { return qrUrl; }
+    public void setQrUrl(String qrUrl) { this.qrUrl = qrUrl; }
 }
+
