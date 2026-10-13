@@ -65,6 +65,12 @@ export function Header() {
           >
             Shop
           </Link>
+          <Link
+            href="/coupons"
+            className="hidden rounded-full px-3 py-2 transition hover:bg-surface-muted sm:block"
+          >
+            Ưu đãi
+          </Link>
           {user ? (
             <>
               <Link href="/orders" className="hidden rounded-full px-3 py-2 transition hover:bg-surface-muted sm:block">Đơn hàng</Link>

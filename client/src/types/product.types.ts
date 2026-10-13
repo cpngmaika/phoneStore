@@ -24,6 +24,8 @@ export type ProductImage = {
 };
 
 export type ProductReview = {
+  id?: number;
+  reviewerName?: string;
   rating: number;
   content: string;
 };
@@ -39,6 +41,7 @@ type BaseProduct = {
   brand: Brand;
   images: ProductImage[];
   reviews: ProductReview[];
+  warrantyPolicyId?: string | null;
 };
 
 export type SmartDeviceProduct = BaseProduct & {
@@ -46,9 +49,13 @@ export type SmartDeviceProduct = BaseProduct & {
   chipset?: string;
   storageGb?: number;
   screenSize?: number;
+  screenTech?: string;
   batteryMah?: number;
+  mainCameraMp?: number;
   os?: string;
   color?: string;
+  supports5G?: boolean;
+  hasCellular?: boolean;
 };
 
 export type EarphoneProduct = BaseProduct & {
@@ -61,9 +68,15 @@ export type EarphoneProduct = BaseProduct & {
 
 export type PowerAccessoryProduct = BaseProduct & {
   category: "CHARGER" | "CABLE" | "CASE";
-  lengthMeters?: number;
   wattageW?: number;
-  isFastCharge?: boolean;
+  portType?: string;
+  fastChargingTech?: string;
+  lengthMeters?: number;
+  connectorFrom?: string;
+  connectorTo?: string;
+  material?: string;
+  color?: string;
+  compatibleModel?: string;
 };
 
 export type Product =
@@ -83,6 +96,29 @@ export type ApiProduct = {
   brandName: string;
   warrantyPolicyId: number | null;
   imageUrls: string[];
+  specifications: {
+    chipset?: string | null;
+    storageGb?: number | null;
+    screenSize?: number | null;
+    screenTech?: string | null;
+    batteryMah?: number | null;
+    mainCameraMp?: number | null;
+    os?: string | null;
+    color?: string | null;
+    supports5G?: boolean | null;
+    hasCellular?: boolean | null;
+    connectionType?: string | null;
+    hasANC?: boolean | null;
+    batteryLifeHours?: number | null;
+    wattage?: number | null;
+    portType?: string | null;
+    fastChargingTech?: string | null;
+    lengthMeters?: number | null;
+    connectorFrom?: string | null;
+    connectorTo?: string | null;
+    material?: string | null;
+    compatibleModel?: string | null;
+  };
 };
 
 export type ProductRequest = {
@@ -94,5 +130,27 @@ export type ProductRequest = {
   status: ApiProductStatus;
   brandId: number;
   warrantyPolicyId?: number | null;
+  clearWarrantyPolicy?: boolean;
   imageUrls: string[];
+  chipset?: string;
+  storageGb?: number;
+  screenSize?: number;
+  screenTech?: string;
+  batteryMah?: number;
+  mainCameraMp?: number;
+  os?: string;
+  color?: string;
+  supports5G?: boolean;
+  hasCellular?: boolean;
+  connectionType?: string;
+  hasANC?: boolean;
+  batteryLifeHours?: number;
+  wattage?: number;
+  portType?: string;
+  fastChargingTech?: string;
+  lengthMeters?: number;
+  connectorFrom?: string;
+  connectorTo?: string;
+  material?: string;
+  compatibleModel?: string;
 };

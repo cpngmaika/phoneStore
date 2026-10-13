@@ -15,6 +15,30 @@ export type ProductFilters = {
 };
 
 function toProduct(product: ApiProduct): Product {
+  const apiSpecs = product.specifications ?? {};
+  const specifications = {
+    chipset: apiSpecs.chipset ?? undefined,
+    storageGb: apiSpecs.storageGb ?? undefined,
+    screenSize: apiSpecs.screenSize ?? undefined,
+    screenTech: apiSpecs.screenTech ?? undefined,
+    batteryMah: apiSpecs.batteryMah ?? undefined,
+    mainCameraMp: apiSpecs.mainCameraMp ?? undefined,
+    os: apiSpecs.os ?? undefined,
+    color: apiSpecs.color ?? undefined,
+    supports5G: apiSpecs.supports5G ?? undefined,
+    hasCellular: apiSpecs.hasCellular ?? undefined,
+    connectionType: apiSpecs.connectionType ?? undefined,
+    hasANC: apiSpecs.hasANC ?? undefined,
+    batteryLifeHours: apiSpecs.batteryLifeHours ?? undefined,
+    wattageW: apiSpecs.wattage ?? undefined,
+    portType: apiSpecs.portType ?? undefined,
+    fastChargingTech: apiSpecs.fastChargingTech ?? undefined,
+    lengthMeters: apiSpecs.lengthMeters ?? undefined,
+    connectorFrom: apiSpecs.connectorFrom ?? undefined,
+    connectorTo: apiSpecs.connectorTo ?? undefined,
+    material: apiSpecs.material ?? undefined,
+    compatibleModel: apiSpecs.compatibleModel ?? undefined,
+  };
   const status: Product["status"] =
     product.status === "IN_STOCK"
       ? "ACTIVE"
@@ -34,19 +58,32 @@ function toProduct(product: ApiProduct): Product {
       name: product.brandName,
       logoUrl: "",
     },
+    warrantyPolicyId:
+      product.warrantyPolicyId === null
+        ? null
+        : String(product.warrantyPolicyId),
     images: product.imageUrls.map((imageUrl, index) => ({
       imageUrl,
       isPrimary: index === 0,
     })),
     reviews: [],
+    ...specifications,
   };
 
   switch (product.category) {
     case "SMARTPHONE":
+      return { ...base, category: product.category };
     case "TABLET":
       return { ...base, category: product.category };
     case "EARPHONE":
-      return { ...base, category: product.category };
+      return {
+        ...base,
+        category: product.category,
+        isWireless:
+          specifications.connectionType == null
+            ? undefined
+            : specifications.connectionType.toLowerCase() !== "wired",
+      };
     case "CHARGER":
     case "CABLE":
     case "CASE":
