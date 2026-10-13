@@ -1,17 +1,12 @@
 "use client";
 
 /**
- * =============================================================================
- * TRANG ĐĂNG KÝ (REGISTER PAGE)
- * =============================================================================
- * - Vai trò: Cho phép khách hàng mới đăng ký tài khoản thành viên trên hệ thống.
  * - Luồng xử lý:
  *   1. Thu thập dữ liệu từ Form (Họ tên, Email, Số điện thoại, Mật khẩu).
  *   2. Gửi yêu cầu POST tới API /api/auth/register thông qua auth.service.ts.
  *   3. Backend mã hóa mật khẩu bằng BCrypt, lưu tài khoản vào cơ sở dữ liệu với vai trò CUSTOMER.
  *   4. Nếu thành công: Tự động chuyển hướng người dùng sang trang Đăng nhập (/login).
  *   5. Nếu thất bại: Hiển thị thông báo lỗi (email đã tồn tại, định dạng không hợp lệ...).
- * =============================================================================
  */
 
 import Link from "next/link";

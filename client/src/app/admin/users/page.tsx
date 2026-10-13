@@ -1,9 +1,6 @@
 "use client";
 
 /**
- * =============================================================================
- * TRANG QUẢN LÝ NGƯỜI DÙNG DÀNH CHO QUẢN TRỊ VIÊN (ADMIN USERS MANAGEMENT)
- * =============================================================================
  * - Vai trò: Cho phép Quản trị viên (ADMIN) theo dõi toàn bộ danh sách tài khoản
  *   người dùng trên hệ thống, thực hiện tạo mới người dùng và khóa / mở khóa tài khoản.
  * - Các tính năng chính:

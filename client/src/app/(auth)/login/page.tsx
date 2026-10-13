@@ -1,11 +1,6 @@
 "use client";
 
 /**
- * =============================================================================
- * TRANG ĐĂNG NHẬP (LOGIN PAGE)
- * =============================================================================
- * - Vai trò: Cho phép người dùng nhập thông tin tài khoản (email, mật khẩu)
- *   để xác thực danh tính với hệ thống Backend.
  * - Luồng xử lý:
  *   1. Thu thập dữ liệu từ Form (sử dụng FormData API tiêu chuẩn).
  *   2. Gửi yêu cầu POST tới API /api/auth/login thông qua auth.service.ts.
@@ -13,7 +8,6 @@
  *      + ADMIN    -> chuyển hướng đến trang Quản trị (/admin).
  *      + CUSTOMER -> chuyển hướng đến trang Hồ sơ cá nhân (/profile).
  *   4. Nếu thất bại: Hiển thị thông báo lỗi từ Backend (sai mật khẩu, tài khoản bị khóa...).
- * =============================================================================
  */
 
 import Link from "next/link";
