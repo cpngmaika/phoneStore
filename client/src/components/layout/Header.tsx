@@ -72,7 +72,11 @@ export function Header() {
             <>
               <Link href="/orders" className="hidden rounded-full px-3 py-2 transition hover:bg-surface-muted sm:block">Đơn hàng</Link>
               <Link href="/profile" className="hidden rounded-full px-3 py-2 transition hover:bg-surface-muted sm:block">Tài khoản</Link>
-              {user.role === "ADMIN" ? <Link href="/admin" className="hidden rounded-full px-3 py-2 text-primary transition hover:bg-primary-soft sm:block">Quản trị</Link> : null}
+              {user && user.role === "ADMIN" ? (
+                <Link href="/admin" className="hidden rounded-full px-3 py-2 text-primary transition hover:bg-primary-soft sm:block">
+                  Quản trị
+                </Link>
+              ) : null}
               <button type="button" onClick={signOut} className="hidden rounded-full px-3 py-2 text-text-muted transition hover:bg-surface-muted sm:block">Đăng xuất</button>
             </>
           ) : (
