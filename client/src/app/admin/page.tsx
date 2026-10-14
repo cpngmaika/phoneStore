@@ -66,13 +66,33 @@ export default function AdminDashboardPage() {
         {!loadingOrders && !error && orders.length === 0 ? <p className="mt-5 text-sm text-text-muted">Chưa có đơn hàng.</p> : null}
         <div className="mt-4 divide-y divide-border">
           {orders.map((order) => (
-            <article key={order.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
-              <div><p className="font-semibold text-text">{order.orderCode}</p><p className="mt-1 text-sm text-text-muted">{order.items.length} sản phẩm · {formatCurrency(order.totalAmount)}</p></div>
-              <label className="text-sm text-text-muted">Trạng thái
-                <select value={order.status} onChange={(event) => changeStatus(order.id, event.target.value as OrderStatus)} className="ml-2 h-10 rounded-lg border border-border bg-surface px-3 text-text">
-                  {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
-                </select>
-              </label>
+            <article key={order.id} className="space-y-4 py-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-text">{order.orderCode}</p>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {order.items.length} sản phẩm · {formatCurrency(order.totalAmount)}
+                  </p>
+                </div>
+                <label className="text-sm text-text-muted">Trạng thái
+                  <select value={order.status} onChange={(event) => changeStatus(order.id, event.target.value as OrderStatus)} className="ml-2 h-10 rounded-lg border border-border bg-surface px-3 text-text">
+                    {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </select>
+                </label>
+              </div>
+              <ul className="divide-y divide-border rounded-lg bg-surface-muted px-4">
+                {order.items.map((item) => (
+                  <li
+                    key={item.productId}
+                    className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                  >
+                    <span className="font-medium text-text">
+                      {item.productName} <span className="text-text-muted">× {item.quantity}</span>
+                    </span>
+                    <span className="text-text-muted">{formatCurrency(item.subtotal)}</span>
+                  </li>
+                ))}
+              </ul>
             </article>
           ))}
         </div>
