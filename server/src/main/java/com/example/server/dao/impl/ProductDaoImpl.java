@@ -65,15 +65,6 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
                 .toList());
     }
 
-    @Override
-    public List<Product> findByCategory(Category category) {
-        return search(null, category, null, null, null);
-    }
-
-    @Override
-    public List<Product> findByBrandId(Long brandId) {
-        return search(null, null, brandId, null, null);
-    }
 
     @Override
     public List<Product> search(
