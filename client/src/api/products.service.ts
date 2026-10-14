@@ -1,4 +1,5 @@
 import { apiEndpoints } from "@/api/endpoints";
+import { getApiAssetUrl } from "@/api/client";
 import { requestData } from "@/api/response";
 import type {
   ApiProduct,
@@ -13,6 +14,17 @@ export type ProductFilters = {
   minPrice?: number;
   maxPrice?: number;
 };
+
+export function getProductImageStoragePath(imageUrl: string) {
+  try {
+    const url = new URL(imageUrl);
+    return url.pathname.includes("/api/product-images/")
+      ? url.pathname
+      : imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
 
 function toProduct(product: ApiProduct): Product {
   const apiSpecs = product.specifications ?? {};
@@ -63,7 +75,7 @@ function toProduct(product: ApiProduct): Product {
         ? null
         : String(product.warrantyPolicyId),
     images: product.imageUrls.map((imageUrl, index) => ({
-      imageUrl,
+      imageUrl: getApiAssetUrl(imageUrl) ?? imageUrl,
       isPrimary: index === 0,
     })),
     reviews: [],
@@ -114,17 +126,28 @@ export async function getProductById(id: number | string) {
   return toProduct(product);
 }
 
-export function createProduct(payload: ProductRequest) {
+function toMultipartFormData(payload: ProductRequest, images: File[]) {
+  const formData = new FormData();
+  formData.append("product", JSON.stringify(payload));
+  images.forEach((image) => formData.append("images", image));
+  return formData;
+}
+
+export function createProduct(payload: ProductRequest, images: File[] = []) {
   return requestData<ApiProduct>(apiEndpoints.products.list, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: toMultipartFormData(payload, images),
   });
 }
 
-export function updateProduct(id: number | string, payload: ProductRequest) {
+export function updateProduct(
+  id: number | string,
+  payload: ProductRequest,
+  images: File[] = [],
+) {
   return requestData<ApiProduct>(apiEndpoints.products.byId(id), {
     method: "PUT",
-    body: JSON.stringify(payload),
+    body: toMultipartFormData(payload, images),
   });
 }
 

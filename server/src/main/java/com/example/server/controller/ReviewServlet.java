@@ -23,11 +23,13 @@ public class ReviewServlet extends HttpServlet {
     private final ReviewService reviewService = new ReviewService();
     private final ObjectMapper objectMapper;
 
+    // Khởi tạo ReviewServlet và đăng ký JavaTimeModule để Jackson xử lý các dạng kiểu dữ liệu thời gian.
     public ReviewServlet() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
     }
 
+    // Xử lý yêu cầu GET để lấy danh sách đánh giá của sản phẩm dựa trên tham số productId.
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
@@ -49,6 +51,7 @@ public class ReviewServlet extends HttpServlet {
         }
     }
 
+    // Xử lý yêu cầu POST để tạo mới một đánh giá sản phẩm từ người dùng đã đăng nhập.
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
@@ -72,6 +75,7 @@ public class ReviewServlet extends HttpServlet {
         }
     }
 
+    // Xử lý yêu cầu PUT để thực hiện ẩn một đánh giá sản phẩm theo ID (/hide/{id}).
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");

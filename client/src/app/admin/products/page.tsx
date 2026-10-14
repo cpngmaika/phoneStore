@@ -1,13 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { getApiOrigin } from "@/api/client";
 import {
   getBrands,
 } from "@/api/brands.service";
 import {
   createProduct,
   deleteProduct,
+  getProductImageStoragePath,
   getProducts,
   updateProduct,
 } from "@/api/products.service";
@@ -93,7 +96,9 @@ function productFormValues(product: Product): Partial<ProductRequest> {
     warrantyPolicyId: product.warrantyPolicyId
       ? Number(product.warrantyPolicyId)
       : null,
-    imageUrls: product.images.map((image) => image.imageUrl),
+    imageUrls: product.images.map((image) =>
+      getProductImageStoragePath(image.imageUrl),
+    ),
   } satisfies Partial<ProductRequest>;
 
   switch (product.category) {
@@ -160,8 +165,10 @@ export default function AdminProductsPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [category, setCategory] = useState<ProductCategory>("SMARTPHONE");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const loadProducts = useCallback(async () => {
     setProducts(await getProducts());
@@ -198,10 +205,16 @@ export default function AdminProductsPage() {
     setBusy(true);
     setError(null);
     try {
-      const imageUrls = String(data.get("imageUrls"))
-        .split(/\r?\n/)
-        .map((url) => url.trim())
-        .filter(Boolean);
+      const imageFiles = data
+        .getAll("images")
+        .filter((value): value is File => value instanceof File && value.size > 0);
+      const invalidImage = imageFiles.find((file) => file.size > 5 * 1024 * 1024);
+      if (invalidImage) {
+        throw new Error("Mỗi ảnh tải lên không được vượt quá 5 MB.");
+      }
+      if (imageUrls.length + imageFiles.length > 8) {
+        throw new Error("Mỗi sản phẩm được lưu tối đa 8 ảnh.");
+      }
       const payload: ProductRequest = {
         sku: String(data.get("sku")).trim(),
         name: String(data.get("name")).trim(),
@@ -229,12 +242,13 @@ export default function AdminProductsPage() {
       }
 
       if (editingProduct) {
-        await updateProduct(editingProduct.id, payload);
+        await updateProduct(editingProduct.id, payload, imageFiles);
       } else {
-        await createProduct(payload);
+        await createProduct(payload, imageFiles);
       }
       setEditingProduct(null);
       setCategory("SMARTPHONE");
+      setImageUrls([]);
       form.reset();
       await loadProducts();
     } catch (requestError) {
@@ -247,15 +261,24 @@ export default function AdminProductsPage() {
   function startEditing(product: Product) {
     setEditingProduct(product);
     setCategory(product.category);
+    setImageUrls(product.images.map((image) => getProductImageStoragePath(image.imageUrl)));
   }
 
   async function removeProduct(id: string) {
+    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
     setError(null);
+    setDeletingProductId(id);
     try {
       await deleteProduct(id);
       setProducts((current) => current.filter((product) => product.id !== id));
+      if (editingProduct?.id === id) {
+        setEditingProduct(null);
+        setImageUrls([]);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Không thể xóa sản phẩm.");
+    } finally {
+      setDeletingProductId(null);
     }
   }
 
@@ -347,7 +370,8 @@ export default function AdminProductsPage() {
                   name={String(field.name)}
                   required={!editingProduct}
                   type={field.type}
-                  min={field.type === "number" ? "0" : undefined}
+                  min={field.name === "screenSize" ? "0.01" : field.type === "number" ? "0" : undefined}
+                  max={field.name === "screenSize" ? "100" : undefined}
                   step={field.name === "screenSize" || field.name === "batteryLifeHours" || field.name === "wattage" || field.name === "lengthMeters" ? "0.01" : undefined}
                   defaultValue={value === undefined ? "" : String(value)}
                   className="h-10 w-full rounded-lg border border-border px-3"
@@ -357,20 +381,53 @@ export default function AdminProductsPage() {
           })}
         </div>
 
-        <label className="space-y-1 text-sm font-medium text-text sm:col-span-2 lg:col-span-3">Ảnh sản phẩm (mỗi URL một dòng)
-          <textarea
-            name="imageUrls"
-            defaultValue={values.imageUrls?.join("\n")}
-            placeholder="https://example.com/image.jpg"
-            className="min-h-20 w-full rounded-lg border border-border p-3"
-          />
-        </label>
+        <div className="space-y-3 text-sm font-medium text-text sm:col-span-2 lg:col-span-3">
+          <p>Ảnh sản phẩm ({imageUrls.length}/8 ảnh hiện có)</p>
+          {imageUrls.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {imageUrls.map((imageUrl) => (
+                <div key={imageUrl} className="space-y-2">
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-muted">
+                    <Image
+                      src={imageUrl.startsWith("/")
+                        ? `${getApiOrigin()}${imageUrl}`
+                        : imageUrl}
+                      alt="Ảnh sản phẩm"
+                      fill
+                      unoptimized
+                      sizes="160px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setImageUrls((current) => current.filter((url) => url !== imageUrl))}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    Gỡ ảnh
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <label className="block space-y-1">
+            <span>Chọn ảnh tải lên (JPEG, PNG, GIF, WebP; tối đa 5 MB/ảnh)</span>
+            <input
+              name="images"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              disabled={imageUrls.length >= 8}
+              className="block w-full rounded-lg border border-border p-3 text-sm"
+            />
+          </label>
+        </div>
         <div className="flex gap-3 sm:col-span-2 lg:col-span-3">
           <button disabled={busy} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
             {busy ? "Đang lưu..." : editingProduct ? "Lưu thay đổi" : "Thêm sản phẩm"}
           </button>
           {editingProduct ? (
-            <button type="button" onClick={() => setEditingProduct(null)} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold">
+            <button type="button" onClick={() => { setEditingProduct(null); setImageUrls([]); }} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold">
               Hủy chỉnh sửa
             </button>
           ) : null}
@@ -387,7 +444,9 @@ export default function AdminProductsPage() {
             <div className="flex items-center gap-4">
               <span className="font-semibold text-text">{formatCurrency(product.price)}</span>
               <button type="button" onClick={() => startEditing(product)} className="text-sm font-semibold text-primary">Sửa</button>
-              <button type="button" onClick={() => removeProduct(product.id)} className="text-sm font-semibold text-red-700">Xóa</button>
+              <button type="button" disabled={deletingProductId === product.id} onClick={() => removeProduct(product.id)} className="text-sm font-semibold text-red-700 disabled:opacity-60">
+                {deletingProductId === product.id ? "Đang xóa..." : "Xóa"}
+              </button>
             </div>
           </article>
         ))}

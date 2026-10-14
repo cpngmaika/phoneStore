@@ -23,22 +23,27 @@ public class ProductService {
     private final ProductDao productDao = new ProductDaoImpl();
     private final BrandDao brandDao = new BrandDaoImpl();
     private final WarrantyPolicyDao warrantyPolicyDao = new WarrantyPolicyDaoImpl();
+
+    // Lấy toàn bộ danh sách sản phẩm và chuyển đổi sang dạng ProductResponse DTO.
     public List<ProductResponse> getAllProducts() {
         return productDao.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
     }
 
+    // Tìm kiếm thông tin chi tiết của một sản phẩm theo ID, ném ngoại lệ nếu không tìm thấy.
     public ProductResponse getProductById(Long id) {
         Product product = productDao.findOptionalById(id)
                 .orElseThrow(() -> new AppException("Product not found with id: " + id));
         return convertToResponse(product);
     }
 
+    // Tìm kiếm và lọc danh sách sản phẩm linh hoạt theo từ khóa, danh mục, thương hiệu và khoảng giá.
     public List<ProductResponse> searchProducts(String keyword, Category category, Long brandId, BigDecimal minPrice, BigDecimal maxPrice) {
         return productDao.search(keyword, category, brandId, minPrice, maxPrice).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
+    // Tạo mới một sản phẩm dựa theo danh mục (Category) tương ứng và lưu trữ hình ảnh kèm theo.
     public ProductResponse createProduct(ProductCreateRequest request) {
         require(request, "Product request is required");
         String sku = required(request.getSku() == null ? null : request.getSku().trim(), "SKU is required");
@@ -71,7 +76,7 @@ public class ProductService {
                         request.getDescription(), required(request.getPrice(), "Price is required"),
                         status, brand, warrantyPolicy, required(request.getChipset(), "Chipset is required"),
                         required(request.getStorageGb(), "Storage is required"),
-                        required(request.getScreenSize(), "Screen size is required"),
+                        requiredScreenSize(request.getScreenSize()),
                         required(request.getBatteryMah(), "Battery capacity is required"),
                         required(request.getOs(), "Operating system is required"),
                         required(request.getColor(), "Color is required"),
@@ -124,7 +129,7 @@ public class ProductService {
                         request.getDescription(), required(request.getPrice(), "Price is required"),
                         status, brand, warrantyPolicy, required(request.getChipset(), "Chipset is required"),
                         required(request.getStorageGb(), "Storage is required"),
-                        required(request.getScreenSize(), "Screen size is required"),
+                        requiredScreenSize(request.getScreenSize()),
                         required(request.getScreenTech(), "Screen technology is required"),
                         required(request.getBatteryMah(), "Battery capacity is required"),
                         required(request.getMainCameraMp(), "Main camera resolution is required"),
@@ -152,6 +157,7 @@ public class ProductService {
         return convertToResponse(product);
     }
 
+    // Cập nhật thông tin chung, thông số kỹ thuật riêng và danh sách hình ảnh của sản phẩm theo ID.
     public ProductResponse updateProduct(Long id, ProductCreateRequest request) {
         require(request, "Product request is required");
         Product product = productDao.findOptionalById(id)
@@ -204,6 +210,7 @@ public class ProductService {
         return convertToResponse(product);
     }
 
+    // Xóa sản phẩm theo ID nếu không còn dữ liệu tham chiếu (như đơn hàng, giỏ hàng hoặc đánh giá).
     public void deleteProduct(Long id) {
         if (productDao.findOptionalById(id).isEmpty()) {
             throw new AppException("Product not found with id: " + id);
@@ -221,6 +228,7 @@ public class ProductService {
         }
     }
 
+    // Chuyển đổi đối tượng Entity Product sang đối tượng ProductResponse DTO để trả về cho Client.
     private ProductResponse convertToResponse(Product product) {
         ProductResponse res = new ProductResponse();
         res.setId(product.getId());
@@ -245,6 +253,7 @@ public class ProductService {
         return res;
     }
 
+    // Trích xuất các thông số kỹ thuật riêng biệt của từng loại sản phẩm thành một cấu trúc Map.
     private Map<String, Object> toSpecifications(Product product) {
         Map<String, Object> specifications = new LinkedHashMap<>();
         if (product instanceof SmartPhone phone) {
@@ -285,11 +294,12 @@ public class ProductService {
         return specifications;
     }
 
+    // Cập nhật các trường thông số kỹ thuật tương ứng tùy theo lớp con cụ thể của sản phẩm.
     private void updateSpecifications(Product product, ProductCreateRequest request) {
         if (product instanceof SmartPhone phone) {
             if (request.getChipset() != null) phone.setChipset(request.getChipset());
             if (request.getStorageGb() != null) phone.setStorageGb(request.getStorageGb());
-            if (request.getScreenSize() != null) phone.setScreenSize(request.getScreenSize());
+            if (request.getScreenSize() != null) phone.setScreenSize(requiredScreenSize(request.getScreenSize()));
             if (request.getScreenTech() != null) phone.setScreenTech(request.getScreenTech());
             if (request.getBatteryMah() != null) phone.setBatteryMah(request.getBatteryMah());
             if (request.getMainCameraMp() != null) phone.setMainCameraMp(request.getMainCameraMp());
@@ -299,7 +309,7 @@ public class ProductService {
         } else if (product instanceof Tablet tablet) {
             if (request.getChipset() != null) tablet.setChipset(request.getChipset());
             if (request.getStorageGb() != null) tablet.setStorageGb(request.getStorageGb());
-            if (request.getScreenSize() != null) tablet.setScreenSize(request.getScreenSize());
+            if (request.getScreenSize() != null) tablet.setScreenSize(requiredScreenSize(request.getScreenSize()));
             if (request.getBatteryMah() != null) tablet.setBatteryMah(request.getBatteryMah());
             if (request.getOs() != null) tablet.setOs(request.getOs());
             if (request.getColor() != null) tablet.setColor(request.getColor());
@@ -323,6 +333,17 @@ public class ProductService {
         }
     }
 
+    private BigDecimal requiredScreenSize(BigDecimal screenSize) {
+        BigDecimal value = required(screenSize, "Screen size is required");
+        if (value.signum() <= 0
+                || value.compareTo(new BigDecimal("100")) > 0
+                || value.stripTrailingZeros().scale() > 2) {
+            throw new AppException("Screen size must be greater than 0, at most 100 inches, and have no more than 2 decimal places");
+        }
+        return value;
+    }
+
+    // Kiểm tra giá trị bắt buộc dạng generic, ném AppException nếu dữ liệu null hoặc rỗng.
     private <T> T required(T value, String message) {
         if (value == null || value instanceof String text && text.isBlank()) {
             throw new AppException(message);
@@ -330,6 +351,7 @@ public class ProductService {
         return value;
     }
 
+    // Kiểm tra đối tượng bắt buộc không được null, ném AppException nếu null.
     private void require(Object value, String message) {
         if (value == null) throw new AppException(message);
     }
