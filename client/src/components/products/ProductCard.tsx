@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: Product }) {
             </p>
             <p className="text-sm font-medium text-text-muted">
               {rating === null ? (
-                <span>Chưa có đánh giá</span>
+                null
               ) : (
                 <>
                   <span className="text-star">★</span> {rating.toFixed(1)}
