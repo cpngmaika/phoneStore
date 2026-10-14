@@ -9,13 +9,18 @@ import { ProductSpecs } from "@/components/products/ProductSpecs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
+import type { WarrantyPolicy } from "@/types/warranty.types";
 
 export function ProductDetail({
   product,
   reviewsError,
+  warrantyPolicy,
+  warrantyPolicyError,
 }: {
   product: Product;
   reviewsError: string | null;
+  warrantyPolicy: WarrantyPolicy | null;
+  warrantyPolicyError: string | null;
 }) {
   const { user } = useCurrentUser();
   const [rating, setRating] = useState(5);
@@ -135,6 +140,41 @@ export function ProductDetail({
           </div>
 
           <ProductSpecs product={product} />
+
+          <section className="rounded-lg border border-border bg-surface p-5">
+            <h2 className="text-lg font-semibold text-text">
+              Chính sách bảo hành
+            </h2>
+            {warrantyPolicyError ? (
+              <p role="alert" className="mt-3 text-sm text-red-700">
+                Không thể tải chính sách bảo hành: {warrantyPolicyError}
+              </p>
+            ) : warrantyPolicy ? (
+              <div className="mt-4 space-y-3 text-sm leading-6 text-text-muted">
+                <p className="font-semibold text-text">{warrantyPolicy.name}</p>
+                <p>
+                  <span className="font-medium text-text">Thời hạn:</span>{" "}
+                  {warrantyPolicy.durationMonths} tháng
+                </p>
+                <p>
+                  <span className="font-medium text-text">Phạm vi bảo hành:</span>{" "}
+                  {warrantyPolicy.coverage || "Chưa cập nhật."}
+                </p>
+                <p>
+                  <span className="font-medium text-text">Điều kiện loại trừ:</span>{" "}
+                  {warrantyPolicy.exclusions || "Chưa cập nhật."}
+                </p>
+                <p>
+                  <span className="font-medium text-text">Thông tin liên hệ:</span>{" "}
+                  {warrantyPolicy.contactInfo || "Chưa cập nhật."}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-text-muted">
+                Sản phẩm chưa có chính sách bảo hành.
+              </p>
+            )}
+          </section>
 
           <div className="rounded-lg border border-border bg-surface p-5">
             <h2 className="text-lg font-semibold text-text">Reviews</h2>
