@@ -21,11 +21,13 @@ public class BrandServlet extends HttpServlet {
     private final BrandService brandService = new BrandService();
     private final ObjectMapper objectMapper;
 
+    // Khởi tạo BrandServlet và đăng ký JavaTimeModule để Jackson xử lý các dạng kiểu dữ liệu thời gian.
     public BrandServlet() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
     }
 
+    // Xử lý yêu cầu GET để lấy toàn bộ danh sách thương hiệu hoặc lấy chi tiết thương hiệu theo ID.
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
@@ -46,6 +48,7 @@ public class BrandServlet extends HttpServlet {
         }
     }
 
+    // Xử lý yêu cầu POST để tạo mới một thương hiệu sản phẩm từ dữ liệu JSON trong request body.
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
@@ -60,6 +63,7 @@ public class BrandServlet extends HttpServlet {
         }
     }
 
+    // Xử lý yêu cầu PUT để cập nhật thông tin thương hiệu theo ID truyền vào trên đường dẫn.
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");
@@ -78,6 +82,7 @@ public class BrandServlet extends HttpServlet {
         }
     }
 
+    // Xử lý yêu cầu DELETE để xóa một thương hiệu theo ID chỉ định trên đường dẫn.
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json; charset=UTF-8");

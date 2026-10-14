@@ -17,7 +17,7 @@ public class SmartPhone extends Product {
     @Column(name = "storage_gb", nullable = false)
     private Integer storageGb;
 
-    @Column(name = "screen_size", nullable = false, precision = 4, scale = 2)
+    @Column(name = "screen_size", nullable = false, precision = 5, scale = 2)
     private BigDecimal screenSize;
 
     @Column(name = "screen_tech", nullable = false, length = 100)

@@ -21,12 +21,14 @@ public class ReviewService {
     private final ProductDao productDao = new ProductDaoImpl();
     private final UserDao userDao = new UserDaoImpl();
 
+    // Lấy danh sách đánh giá của một sản phẩm theo ID và chuyển đổi sang danh sách ReviewResponse DTO.
     public List<ReviewResponse> getReviewsByProduct(Long productId) {
         return reviewDao.findByProductId(productId).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
+    // Tạo mới một đánh giá sản phẩm cho người dùng, kiểm tra điều kiện tồn tại người dùng, sản phẩm và giới hạn đánh giá 1 lần.
     public ReviewResponse createReview(Long userId, ReviewCreateRequest request) {
         if (request == null || request.getProductId() == null) {
             throw new AppException("Vui lòng chọn sản phẩm để đánh giá.");
@@ -49,6 +51,7 @@ public class ReviewService {
         return convertToResponse(review);
     }
 
+    // Ẩn một đánh giá sản phẩm theo ID để phục vụ công tác quản trị nội dung.
     public void hideReview(Long reviewId) {
         ProductReview review = reviewDao.findOptionalById(reviewId)
                 .orElseThrow(() -> new AppException("Review not found"));
@@ -56,6 +59,7 @@ public class ReviewService {
         reviewDao.update(review);
     }
 
+    // Chuyển đổi đối tượng Entity ProductReview sang đối tượng ReviewResponse DTO để trả về cho Client.
     private ReviewResponse convertToResponse(ProductReview review) {
         ReviewResponse res = new ReviewResponse();
         res.setId(review.getId());

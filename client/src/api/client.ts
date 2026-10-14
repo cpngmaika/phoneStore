@@ -12,6 +12,24 @@ const candidateBases = Array.from(
 
 let cachedBaseUrl: string | null = null;
 
+export function getApiBaseUrl() {
+  return cachedBaseUrl ?? candidateBases[0];
+}
+
+export function getApiOrigin() {
+  return new URL(getApiBaseUrl()).origin;
+}
+
+export function getApiAssetUrl(assetUrl: string | null | undefined) {
+  if (
+    assetUrl?.includes("/api/product-images/") &&
+    !/^[a-z][a-z\d+.-]*:/i.test(assetUrl)
+  ) {
+    return `${getApiOrigin()}${assetUrl}`;
+  }
+  return assetUrl;
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -22,6 +40,7 @@ export async function apiClient<T>(
   if (
     options.body !== undefined &&
     options.body !== null &&
+    !(typeof FormData !== "undefined" && options.body instanceof FormData) &&
     !headers.has("Content-Type")
   ) {
     headers.set("Content-Type", "application/json");
