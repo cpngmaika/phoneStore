@@ -35,6 +35,16 @@ export default function OrderDetailPage() {
         <p className="text-sm font-semibold text-primary">Đặt hàng thành công</p>
         <h1 className="mt-2 text-3xl font-semibold text-text">{order.orderCode}</h1>
         <p className="mt-3 text-text-muted">Trạng thái: <span className="font-semibold text-text">{order.status}</span></p>
+        {order.status === "PENDING" && (
+          <div className="mt-4">
+            <Link
+              href={`/checkout/qr?orderId=${order.id}`}
+              className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
+            >
+              Thanh toán chuyển khoản QR
+            </Link>
+          </div>
+        )}
       </div>
       <section className="rounded-xl border border-border bg-surface p-6">
         <h2 className="text-xl font-semibold text-text">Sản phẩm trong đơn</h2>
