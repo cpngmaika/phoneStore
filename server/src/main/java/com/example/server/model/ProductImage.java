@@ -180,11 +180,13 @@ public class ProductImage {
 
     private static String detectImageExtension(byte[] content) {
         if (content.length >= 3
+                // JPEG: Bắt đầu bằng 0xFF 0xD8 0xFF
                 && (content[0] & 0xff) == 0xff
                 && (content[1] & 0xff) == 0xd8
                 && (content[2] & 0xff) == 0xff) {
             return "jpg";
         }
+        // PNG: Bắt đầu bằng 0x89 'P' 'N' 'G' '\r' '\n' 0x1A '\n'
         if (content.length >= 8
                 && content[0] == (byte) 0x89
                 && content[1] == 0x50

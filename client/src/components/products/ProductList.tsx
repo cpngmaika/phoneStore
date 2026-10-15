@@ -5,6 +5,7 @@ import { getBrands } from "@/api/brands.service";
 import { getProducts } from "@/api/products.service";
 import { FilterBar, type ProductSort } from "@/components/products/FilterBar";
 import { ProductCard } from "@/components/products/ProductCard";
+import { Pagination } from "@/components/ui/Pagination";
 import type { ApiBrand } from "@/types/brand.types";
 import type { Product, ProductCategory } from "@/types/product.types";
 
@@ -22,12 +23,14 @@ function getServerSearchKeyword() {
 }
 
 export function ProductList() {
+  const pageSize = 12;
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [category, setCategory] = useState<"ALL" | ProductCategory>("ALL");
   const [brand, setBrand] = useState("ALL");
   const [price, setPrice] = useState("ALL");
   const [sort, setSort] = useState<ProductSort>("popular");
+  const [page, setPage] = useState({ key: "", value: 1 });
   const keyword = useSyncExternalStore(
     subscribeToSearch,
     getSearchKeyword,
@@ -75,12 +78,12 @@ export function ProductList() {
     if (trimmedKeyword) filters.keyword = trimmedKeyword;
     if (category !== "ALL") filters.category = category;
     if (brand !== "ALL") filters.brandId = Number(brand);
-    if (price === "UNDER_250") filters.maxPrice = 249.99;
-    if (price === "250_800") {
-      filters.minPrice = 250;
-      filters.maxPrice = 800;
+    if (price === "UNDER_2500000") filters.maxPrice = 2499999.99;
+    if (price === "2500000_5000000") {
+      filters.minPrice = 2500000;
+      filters.maxPrice = 4999999.99;
     }
-    if (price === "OVER_800") filters.minPrice = 800.01;
+    if (price === "OVER_5000000") filters.minPrice = 5000000.01;
 
     getProducts(filters)
       .then((result) => {
@@ -124,6 +127,14 @@ export function ProductList() {
     }
     return available;
   }, [products, sort]);
+  const paginationKey = JSON.stringify({ brand, category, keyword, price, sort });
+  const pageCount = Math.ceil(visibleProducts.length / pageSize);
+  const selectedPage = page.key === paginationKey ? page.value : 1;
+  const currentPage = Math.min(selectedPage, Math.max(pageCount, 1));
+  const paginatedProducts = visibleProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   return (
     <>
@@ -186,11 +197,18 @@ export function ProductList() {
           </div>
         ) : (
           <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleProducts.map((product) => (
+            {paginatedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
+        {!loadingProducts && !currentProductsError && visibleProducts.length > 0 ? (
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={(value) => setPage({ key: paginationKey, value })}
+          />
+        ) : null}
 
         {loadingBrands ? (
           <p className="sr-only" role="status">Đang tải thương hiệu...</p>

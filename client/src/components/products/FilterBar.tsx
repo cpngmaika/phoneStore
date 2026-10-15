@@ -28,9 +28,9 @@ const categories: Array<{ value: "ALL" | ProductCategory; label: string }> = [
 
 const prices = [
   { value: "ALL", label: "Mọi mức giá" },
-  { value: "UNDER_250", label: "Dưới $250" },
-  { value: "250_800", label: "$250 – $800" },
-  { value: "OVER_800", label: "Trên $800" },
+  { value: "UNDER_2500000", label: "Dưới 2,500,000 VND" },
+  { value: "2500000_5000000", label: "2,500,000 VND – 5,000,000 VND" },
+  { value: "OVER_5000000", label: "Trên 5,000,000 VND" },
 ];
 
 const sortOptions: Array<{ value: ProductSort; label: string }> = [

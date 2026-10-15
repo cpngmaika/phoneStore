@@ -57,6 +57,7 @@ export default function AdminDashboardPage() {
         <nav className="flex gap-3 text-sm font-semibold">
           <Link href="/admin/users" className="rounded-lg border border-border px-4 py-2">Quản lý người dùng</Link>
           <Link href="/admin/products" className="rounded-lg border border-border px-4 py-2">Quản lý sản phẩm</Link>
+          <Link href="/admin/coupons" className="rounded-lg border border-border px-4 py-2">Quản lý mã giảm giá</Link>
         </nav>
       </div>
       <section className="rounded-xl border border-border bg-surface p-6">

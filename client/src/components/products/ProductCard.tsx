@@ -3,7 +3,16 @@ import Image from "next/image";
 import { formatCurrency, titleCase } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
 
-export function ProductCard({ product }: { product: Product }) {
+type ProductCardProps = {
+  product: Product;
+  actions?: {
+    onEdit: () => void;
+    onDelete: () => void;
+    deleting?: boolean;
+  };
+};
+
+export function ProductCard({ product, actions }: ProductCardProps) {
   const primaryImage = product.images.find((image) => image.isPrimary);
   const rating = product.reviews.length
     ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
@@ -11,8 +20,8 @@ export function ProductCard({ product }: { product: Product }) {
     : null;
 
   return (
-    <Link href={`/products/${product.id}`} className="group block">
-      <article className="h-full overflow-hidden rounded-lg bg-surface transition duration-200 hover:-translate-y-1 hover:shadow-soft">
+    <article className="group flex h-full flex-col overflow-hidden rounded-lg bg-surface transition duration-200 hover:-translate-y-1 hover:shadow-soft">
+      <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-muted">
           {primaryImage ? (
             <Image
@@ -57,7 +66,26 @@ export function ProductCard({ product }: { product: Product }) {
             </p>
           </div>
         </div>
-      </article>
-    </Link>
+      </Link>
+      {actions ? (
+        <div className="mt-auto flex items-center justify-end gap-3 border-t border-border px-4 py-3">
+          <button
+            type="button"
+            onClick={actions.onEdit}
+            className="text-sm font-semibold text-primary"
+          >
+            Sửa
+          </button>
+          <button
+            type="button"
+            disabled={actions.deleting}
+            onClick={actions.onDelete}
+            className="text-sm font-semibold text-red-700 disabled:opacity-60"
+          >
+            {actions.deleting ? "Đang xóa..." : "Xóa"}
+          </button>
+        </div>
+      ) : null}
+    </article>
   );
 }

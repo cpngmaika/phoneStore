@@ -2,6 +2,7 @@ package com.example.server.dao;
 
 import com.example.server.model.Coupon;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.TypedQuery;
 
 import java.util.List;
@@ -59,6 +60,29 @@ public class CouponDao extends BaseDao<Coupon, Long> {
                     )
                     .setParameter("date", date)
                     .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    public void deleteAndUnlinkOrders(Coupon coupon) {
+        EntityManager em = getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            Coupon managedCoupon = em.find(Coupon.class, coupon.getId());
+            if (managedCoupon != null) {
+                em.createQuery("UPDATE Order o SET o.coupon = NULL WHERE o.coupon = :coupon")
+                        .setParameter("coupon", managedCoupon)
+                        .executeUpdate();
+                em.remove(managedCoupon);
+            }
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            throw e;
         } finally {
             em.close();
         }

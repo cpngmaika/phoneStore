@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CartItem } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { createOrder } from "@/api/orders.service";
+import { getAvailableCoupons } from "@/api/coupons.service";
 import { useCart } from "@/hooks/cart.hooks";
+import type { Coupon } from "@/types/coupon.types";
 
 export default function CartPage() {
   const router = useRouter();
@@ -14,6 +16,28 @@ export default function CartPage() {
   const [couponCode, setCouponCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponLoadError, setCouponLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAvailableCoupons()
+      .then((available) => {
+        if (!cancelled) setCoupons(available);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setCouponLoadError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Không thể tải mã giảm giá.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function placeOrder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,6 +107,36 @@ export default function CartPage() {
                 className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary"
                 placeholder="Nhập mã giảm giá"
               />
+              {couponLoadError ? (
+                <p role="alert" className="mt-3 text-sm text-red-700">
+                  Không thể tải mã giảm giá: {couponLoadError}
+                </p>
+              ) : coupons.length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-semibold text-text">Mã đang có hiệu lực</p>
+                  <div className="flex flex-wrap gap-2">
+                    {coupons.map((coupon) => (
+                      <button
+                        key={coupon.id}
+                        type="button"
+                        onClick={() => setCouponCode(coupon.code)}
+                        className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                          couponCode === coupon.code
+                            ? "border-primary bg-primary-soft text-primary"
+                            : "border-border text-text hover:border-primary"
+                        }`}
+                      >
+                        <span>{coupon.code}</span>
+                        <span className="ml-2 text-xs font-normal">
+                          {coupon.discountType === "PERCENTAGE"
+                            ? `Giảm ${coupon.discountValue}%`
+                            : `Giảm ${new Intl.NumberFormat("vi-VN").format(coupon.discountValue)}đ`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {error ? (
                 <p className="mt-3 text-sm text-red-700" role="alert">{error}</p>
               ) : null}
