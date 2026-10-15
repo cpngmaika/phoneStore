@@ -1,167 +1,181 @@
 "use client";
 
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useSyncExternalStore,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from "react";
-import { calculateCart } from "@/api/cart.service";
-import type { Cart, CartItem } from "@/types/cart.types";
+import {
+    addCartItem,
+    clearCart as clearCartRequest,
+    getCart,
+    isUnauthorizedError,
+    removeCartItem,
+    toCart,
+    updateCartItem,
+} from "@/api/cart.service";
+import { AUTH_CHANGE_EVENT } from "@/hooks/use-current-user";
+import type { Cart } from "@/types/cart.types";
 import type { Product } from "@/types/product.types";
 
 type CartContextValue = {
-  cart: Cart;
-  addItem: (product: Product, quantity?: number) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  removeItem: (productId: string) => void;
-  clearCart: () => void;
-  itemCount: number;
+    cart: Cart;
+    /** Ném lỗi nếu thất bại (kể cả 401 khi chưa đăng nhập) để nút bấm xử lý. */
+    addItem: (product: Product, quantity?: number) => Promise<void>;
+    updateQuantity: (productId: string, quantity: number) => Promise<void>;
+    removeItem: (productId: string) => Promise<void>;
+    clearCart: () => Promise<void>;
+    refreshCart: () => Promise<void>;
+    itemCount: number;
+    loading: boolean;
+    loggedIn: boolean;
+    error: string | null;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const storageKey = "phone-store-cart-v2";
-const emptyCart: Cart = { id: "local-cart", items: [], total: 0 };
-let cartSnapshot: Cart | null = null;
-const listeners = new Set<() => void>();
+const emptyCart: Cart = { id: "empty-cart", items: [], total: 0 };
 
-function isCartItem(value: unknown): value is CartItem {
-  if (typeof value !== "object" || value === null || !("product" in value)) {
-    return false;
-  }
-  const item = value as {
-    product?: { id?: unknown; price?: unknown };
-    quantity?: unknown;
-  };
-  return (
-    typeof item.product?.id === "string" &&
-    /^\d+$/.test(item.product.id) &&
-    typeof item.product.price === "number" &&
-    typeof item.quantity === "number" &&
-    Number.isInteger(item.quantity) &&
-    item.quantity > 0
-  );
-}
-
-function getCartSnapshot() {
-  if (cartSnapshot) return cartSnapshot;
-  if (typeof window === "undefined") return emptyCart;
-
-  const savedCart = window.localStorage.getItem(storageKey);
-  if (!savedCart) {
-    cartSnapshot = emptyCart;
-    return cartSnapshot;
-  }
-
-  const parsedCart: unknown = JSON.parse(savedCart);
-  if (
-    typeof parsedCart !== "object" ||
-    parsedCart === null ||
-    !("items" in parsedCart) ||
-    !Array.isArray(parsedCart.items) ||
-    !parsedCart.items.every(isCartItem)
-  ) {
-    throw new Error("Saved cart data is invalid.");
-  }
-  cartSnapshot = calculateCart(parsedCart.items);
-  return cartSnapshot;
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function saveCart(cart: Cart) {
-  cartSnapshot = cart;
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(storageKey, JSON.stringify(cart));
-  }
-  listeners.forEach((listener) => listener());
+function messageOf(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const cart = useSyncExternalStore(
-    subscribe,
-    getCartSnapshot,
-    () => emptyCart,
-  );
+    const [cart, setCart] = useState<Cart>(emptyCart);
+    const [loading, setLoading] = useState(true);
+    const [loggedIn, setLoggedIn] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const addItem = useCallback((product: Product, quantity = 1) => {
-    const currentCart = getCartSnapshot();
-      const existingItem = currentCart.items.find(
-        (item) => item.product.id === product.id,
-      );
+    // Tải giỏ hàng từ server: GET /api/cart  ->  CartServlet.doGet
+    const refreshCart = useCallback(async () => {
+        try {
+            setCart(toCart(await getCart()));
+            setLoggedIn(true);
+            setError(null);
+        } catch (requestError) {
+            // 401 = chưa đăng nhập -> giỏ trống, không coi là lỗi
+            setCart(emptyCart);
+            setLoggedIn(false);
+            setError(
+                isUnauthorizedError(requestError)
+                    ? null
+                    : messageOf(requestError, "Không thể tải giỏ hàng."),
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-      if (existingItem) {
-        saveCart(calculateCart(
-          currentCart.items.map((item) =>
-            item.product.id === product.id
-              ? { ...item, quantity: item.quantity + quantity }
-              : item,
-          ),
-        ));
-        return;
-      }
+    // Tải khi mở web, và tải lại mỗi khi đăng nhập / đăng xuất
+    useEffect(() => {
+        void refreshCart();
+        const handleAuthChange = () => {
+            void refreshCart();
+        };
+        window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+        return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+    }, [refreshCart]);
 
-      saveCart(calculateCart([
-        ...currentCart.items,
-        { product, quantity, subtotal: product.price * quantity },
-      ]));
-  }, []);
+    // POST /api/cart/items  ->  CartServlet.doPost
+    const addItem = useCallback(async (product: Product, quantity = 1) => {
+        const productId = Number(product.id);
+        if (!Number.isSafeInteger(productId)) {
+            throw new Error("Sản phẩm không có ID hợp lệ.");
+        }
+        setCart(toCart(await addCartItem(productId, quantity)));
+        setLoggedIn(true);
+        setError(null);
+    }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    const currentCart = getCartSnapshot();
-    saveCart(
-      calculateCart(
-        currentCart.items
-          .map((item) =>
-            item.product.id === productId
-              ? { ...item, quantity: Math.max(quantity, 1) }
-              : item,
-          )
-          .filter((item) => item.quantity > 0),
-      ),
+    // PUT /api/cart/items/{itemId}  ->  CartServlet.doPut
+    const updateQuantity = useCallback(
+        async (productId: string, quantity: number) => {
+            const item = cart.items.find((entry) => entry.product.id === productId);
+            if (item?.itemId === undefined) return;
+
+            const nextQuantity = Math.max(quantity, 1);
+            if (nextQuantity === item.quantity) return;
+
+            try {
+                setCart(toCart(await updateCartItem(item.itemId, nextQuantity)));
+                setError(null);
+            } catch (requestError) {
+                setError(messageOf(requestError, "Không thể cập nhật số lượng."));
+            }
+        },
+        [cart.items],
     );
-  }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    const currentCart = getCartSnapshot();
-    saveCart(
-      calculateCart(
-        currentCart.items.filter((item) => item.product.id !== productId),
-      ),
+    // DELETE /api/cart/items/{itemId}  ->  CartServlet.doDelete
+    const removeItem = useCallback(
+        async (productId: string) => {
+            const item = cart.items.find((entry) => entry.product.id === productId);
+            if (item?.itemId === undefined) return;
+
+            try {
+                setCart(toCart(await removeCartItem(item.itemId)));
+                setError(null);
+            } catch (requestError) {
+                setError(messageOf(requestError, "Không thể xóa sản phẩm."));
+            }
+        },
+        [cart.items],
     );
-  }, []);
 
-  const clearCart = useCallback(() => {
-    saveCart(calculateCart([]));
-  }, []);
+    // DELETE /api/cart/clear  ->  CartServlet.doDelete
+    const clearCart = useCallback(async () => {
+        if (!loggedIn) {
+            setCart(emptyCart);
+            return;
+        }
+        try {
+            setCart(toCart(await clearCartRequest()));
+            setError(null);
+        } catch (requestError) {
+            setError(messageOf(requestError, "Không thể xóa giỏ hàng."));
+        }
+    }, [loggedIn]);
 
-  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const value = useMemo(
-    () => ({
-      cart,
-      addItem,
-      updateQuantity,
-      removeItem,
-      clearCart,
-      itemCount,
-    }),
-    [addItem, cart, clearCart, itemCount, removeItem, updateQuantity],
-  );
+    const value = useMemo(
+        () => ({
+            cart,
+            addItem,
+            updateQuantity,
+            removeItem,
+            clearCart,
+            refreshCart,
+            itemCount,
+            loading,
+            loggedIn,
+            error,
+        }),
+        [
+            addItem,
+            cart,
+            clearCart,
+            error,
+            itemCount,
+            loading,
+            loggedIn,
+            refreshCart,
+            removeItem,
+            updateQuantity,
+        ],
+    );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
-  const context = useContext(CartContext);
+    const context = useContext(CartContext);
 
-  if (!context) {
-    throw new Error("useCart must be used within CartProvider");
-  }
+    if (!context) {
+        throw new Error("useCart must be used within CartProvider");
+    }
 
-  return context;
+    return context;
 }
