@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/Button";
+import type { ApiPayment } from "@/types/order.types";
 
 type PaymentPollerProps = {
   orderId: number;
@@ -20,7 +21,9 @@ export function PaymentPoller({ orderId, initialStatus, onRefresh }: PaymentPoll
 
     const interval = setInterval(async () => {
       try {
-        const res = await apiClient<any>(`/api/payment/check?orderId=${orderId}`);
+        const res = await apiClient<ApiPayment & { data?: ApiPayment }>(
+          `/api/payment/check?orderId=${orderId}`,
+        );
         const payment = res?.data ?? res;
         if (payment?.status === "SUCCESS") {
           onRefresh?.();

@@ -1,6 +1,7 @@
 package com.example.server.controller;
 
 import com.example.server.dto.common.ApiResponse;
+import com.example.server.dto.product.PagedProductResponse;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
 import com.example.server.model.enums.Category;
@@ -67,6 +68,26 @@ public class ProductServlet extends HttpServlet {
                     List<ProductResponse> products = productService.getAllProducts();
                     resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(products)));
                 }
+            } else if ("/search".equals(pathInfo)) {
+                // Public, server-paginated catalogue search used by the SSR product listing.
+                String keyword = req.getParameter("keyword");
+                String categoryStr = req.getParameter("category");
+                String brandIdStr = req.getParameter("brandId");
+                String minPriceStr = req.getParameter("minPrice");
+                String maxPriceStr = req.getParameter("maxPrice");
+                String sort = req.getParameter("sort");
+
+                Category category = categoryStr != null && !categoryStr.isEmpty() ? Category.valueOf(categoryStr) : null;
+                Long brandId = brandIdStr != null && !brandIdStr.isEmpty() ? Long.parseLong(brandIdStr) : null;
+                BigDecimal minPrice = minPriceStr != null && !minPriceStr.isEmpty() ? new BigDecimal(minPriceStr) : null;
+                BigDecimal maxPrice = maxPriceStr != null && !maxPriceStr.isEmpty() ? new BigDecimal(maxPriceStr) : null;
+                int page = parseIntOrDefault(req.getParameter("page"), 1);
+                int size = parseIntOrDefault(req.getParameter("size"), 12);
+
+                PagedProductResponse result = productService.searchProductsPaged(
+                        keyword, category, brandId, minPrice, maxPrice, sort, page, size
+                );
+                resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(result)));
             } else {
                 Long id = Long.parseLong(pathInfo.substring(1));
                 ProductResponse product = productService.getProductById(id);
@@ -148,6 +169,17 @@ public class ProductServlet extends HttpServlet {
         }
     }
 
+
+    private static int parseIntOrDefault(String value, int fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
 
     private boolean isAdmin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         User user = SessionUtil.getLoggedInUser(req);

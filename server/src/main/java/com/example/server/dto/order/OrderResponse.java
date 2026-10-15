@@ -3,12 +3,14 @@ package com.example.server.dto.order;
 import com.example.server.model.enums.OrderStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class OrderResponse {
     private Long id;
     private String orderCode;
     private OrderStatus status;
+    private LocalDateTime orderDate;
     private BigDecimal totalAmount;
     private String couponCode;
     private List<OrderItemResponse> items;
@@ -24,6 +26,9 @@ public class OrderResponse {
 
     public OrderStatus getStatus() { return status; }
     public void setStatus(OrderStatus status) { this.status = status; }
+
+    public LocalDateTime getOrderDate() { return orderDate; }
+    public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
 
     public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }

@@ -285,6 +285,7 @@ public class OrderServlet extends HttpServlet {
             response.setId(order.getId());
             response.setOrderCode(order.getOrderNumber());
             response.setStatus(order.getStatus());
+            response.setOrderDate(order.getOrderDate());
             response.setTotalAmount(order.getTotalAmount());
             response.setCouponCode(
                     order.getCoupon() == null ? null : order.getCoupon().getCode()

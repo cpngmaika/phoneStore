@@ -10,17 +10,23 @@ import com.example.server.model.Charger;
 import com.example.server.model.Cable;
 import com.example.server.model.Case;
 import com.example.server.model.enums.Category;
+import com.example.server.model.enums.ProductStatus;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao {
@@ -82,6 +88,151 @@ public class ProductDaoImpl extends BaseDao<Product, Long> implements ProductDao
         }
         products.sort(Comparator.comparing(Product::getId));
         return products;
+    }
+
+    @Override
+    public List<Product> searchPaged(
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            int offset,
+            int limit
+    ) {
+        EntityManager em = getEntityManager();
+        try {
+            CriteriaBuilder builder = em.getCriteriaBuilder();
+
+            // 1. Fetch only the ordered ids for the requested page.
+            CriteriaQuery<Long> idQuery = builder.createQuery(Long.class);
+            Root<Product> idRoot = idQuery.from(Product.class);
+            idQuery.select(idRoot.get("id"))
+                    .where(buildPublicFilters(builder, idQuery, idRoot, keyword, category, brandId, minPrice, maxPrice))
+                    .orderBy(buildSort(builder, idRoot, sort));
+
+            List<Long> ids = em.createQuery(idQuery)
+                    .setFirstResult(Math.max(offset, 0))
+                    .setMaxResults(Math.max(limit, 1))
+                    .getResultList();
+
+            if (ids.isEmpty()) {
+                return List.of();
+            }
+
+            // 2. Eagerly load the page's products with their associations. Pagination is not
+            //    applied here so that fetching the images collection does not force in-memory paging.
+            List<Product> loaded = em.createQuery(
+                            "SELECT DISTINCT p FROM Product p "
+                                    + "JOIN FETCH p.brand "
+                                    + "LEFT JOIN FETCH p.warrantyPolicy "
+                                    + "LEFT JOIN FETCH p.images "
+                                    + "WHERE p.id IN :ids",
+                            Product.class
+                    )
+                    .setParameter("ids", ids)
+                    .getResultList();
+
+            Map<Long, Product> byId = new LinkedHashMap<>();
+            for (Product product : loaded) {
+                byId.put(product.getId(), product);
+            }
+
+            // 3. Restore the order determined by the id query.
+            List<Product> ordered = new ArrayList<>();
+            for (Long id : ids) {
+                Product product = byId.get(id);
+                if (product != null) {
+                    ordered.add(product);
+                }
+            }
+            return ordered;
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public long count(
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
+        EntityManager em = getEntityManager();
+        try {
+            CriteriaBuilder builder = em.getCriteriaBuilder();
+            CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
+            Root<Product> product = countQuery.from(Product.class);
+            countQuery.select(builder.count(product))
+                    .where(buildPublicFilters(builder, countQuery, product, keyword, category, brandId, minPrice, maxPrice));
+            return em.createQuery(countQuery).getSingleResult();
+        } finally {
+            em.close();
+        }
+    }
+
+    private Predicate[] buildPublicFilters(
+            CriteriaBuilder builder,
+            AbstractQuery<?> query,
+            Root<Product> product,
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
+        List<Predicate> filters = new ArrayList<>();
+        // Discontinued products are never part of the public catalogue.
+        filters.add(builder.notEqual(product.get("status"), ProductStatus.DISCONTINUED));
+
+        // A product row is only usable when its concrete subtype row exists. Orphan rows
+        // (e.g. category = SMARTPHONE but no smartphone_details row) cannot be instantiated
+        // by Hibernate on a polymorphic query, which previously failed the whole catalogue.
+        List<Predicate> concreteType = new ArrayList<>();
+        for (Class<? extends Product> type : PRODUCT_TYPES) {
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<? extends Product> subtype = subquery.from(type);
+            subquery.select(subtype.<Long>get("id"))
+                    .where(builder.equal(subtype.<Long>get("id"), product.<Long>get("id")));
+            concreteType.add(builder.exists(subquery));
+        }
+        filters.add(builder.or(concreteType.toArray(Predicate[]::new)));
+
+        if (keyword != null && !keyword.isBlank()) {
+            String pattern = "%" + keyword.trim().toLowerCase() + "%";
+            filters.add(builder.or(
+                    builder.like(builder.lower(product.get("name")), pattern),
+                    builder.like(builder.lower(product.get("sku")), pattern)
+            ));
+        }
+        if (category != null) filters.add(builder.equal(product.get("category"), category));
+        if (brandId != null) filters.add(builder.equal(product.get("brand").get("id"), brandId));
+        if (minPrice != null) filters.add(builder.greaterThanOrEqualTo(product.get("price"), minPrice));
+        if (maxPrice != null) filters.add(builder.lessThanOrEqualTo(product.get("price"), maxPrice));
+        return filters.toArray(Predicate[]::new);
+    }
+
+    private List<Order> buildSort(CriteriaBuilder builder, Root<Product> product, String sort) {
+        String normalized = sort == null ? "" : sort.trim().toLowerCase();
+        return switch (normalized) {
+            case "newest" -> List.of(builder.desc(product.get("id")));
+            case "price_asc" -> List.of(
+                    builder.asc(product.get("price")),
+                    builder.asc(product.get("id"))
+            );
+            case "price_desc" -> List.of(
+                    builder.desc(product.get("price")),
+                    builder.asc(product.get("id"))
+            );
+            case "name_asc" -> List.of(
+                    builder.asc(builder.lower(product.get("name"))),
+                    builder.asc(product.get("id"))
+            );
+            default -> List.of(builder.asc(product.get("id")));
+        };
     }
 
     @Override

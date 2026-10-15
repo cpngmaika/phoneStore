@@ -6,10 +6,17 @@ import { Button } from "@/components/ui/Button";
 
 type CartSummaryProps = {
   placingOrder: boolean;
+  discountAmount?: number;
+  finalTotal?: number;
 };
 
-export function CartSummary({ placingOrder }: CartSummaryProps) {
+export function CartSummary({
+  placingOrder,
+  discountAmount = 0,
+  finalTotal,
+}: CartSummaryProps) {
   const { cart } = useCart();
+  const total = finalTotal ?? cart.total;
 
   return (
     <aside className="rounded-lg border border-border bg-surface p-6 lg:sticky lg:top-32">
@@ -19,10 +26,16 @@ export function CartSummary({ placingOrder }: CartSummaryProps) {
           <span>Tạm tính</span>
           <span>{formatCurrency(cart.total)}</span>
         </div>
+        {discountAmount > 0 ? (
+          <div className="flex justify-between text-primary">
+            <span>Giảm giá</span>
+            <span>-{formatCurrency(discountAmount)}</span>
+          </div>
+        ) : null}
       </div>
       <div className="mt-6 flex justify-between border-t border-border pt-6 text-lg font-semibold text-text">
         <span>Tổng cộng</span>
-        <span>{formatCurrency(cart.total)}</span>
+        <span>{formatCurrency(total)}</span>
       </div>
       <Button
         type="submit"

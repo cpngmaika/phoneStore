@@ -37,6 +37,23 @@ public class ProductReviewDaoImpl extends BaseDao<ProductReview, Long> implement
     }
 
     @Override
+    public List<Object[]> countByRating(Long productId) {
+        EntityManager em = getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT r.rating, COUNT(r) FROM ProductReview r "
+                                    + "WHERE r.product.id = :productId AND r.isHidden = false "
+                                    + "GROUP BY r.rating",
+                            Object[].class
+                    )
+                    .setParameter("productId", productId)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
     public boolean existsByReviewerAndProduct(Long reviewerId, Long productId) {
         EntityManager em = getEntityManager();
         try {

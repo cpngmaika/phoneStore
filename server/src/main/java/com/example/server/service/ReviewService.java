@@ -8,12 +8,15 @@ import com.example.server.dao.impl.ProductReviewDaoImpl;
 import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.review.ReviewCreateRequest;
 import com.example.server.dto.review.ReviewResponse;
+import com.example.server.dto.review.ReviewSummaryResponse;
 import com.example.server.exception.AppException;
 import com.example.server.model.Product;
 import com.example.server.model.ProductReview;
 import com.example.server.model.User;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ReviewService {
@@ -26,6 +29,33 @@ public class ReviewService {
         return reviewDao.findByProductId(productId).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    // Tổng hợp điểm đánh giá trung bình và phân bố số sao (chỉ tính các đánh giá đang hiển thị).
+    public ReviewSummaryResponse getReviewSummary(Long productId) {
+        Map<Integer, Long> distribution = new LinkedHashMap<>();
+        for (int rating = 1; rating <= 5; rating++) {
+            distribution.put(rating, 0L);
+        }
+
+        long total = 0;
+        long weightedSum = 0;
+        for (Object[] row : reviewDao.countByRating(productId)) {
+            Integer rating = (Integer) row[0];
+            Long count = (Long) row[1];
+            if (rating == null || count == null) continue;
+            distribution.put(rating, count);
+            total += count;
+            weightedSum += (long) rating * count;
+        }
+
+        ReviewSummaryResponse response = new ReviewSummaryResponse();
+        response.setDistribution(distribution);
+        response.setTotalReviews(total);
+        response.setAverageRating(
+                total == 0 ? 0.0 : Math.round(((double) weightedSum / total) * 10.0) / 10.0
+        );
+        return response;
     }
 
     // Tạo mới một đánh giá sản phẩm cho người dùng, kiểm tra điều kiện tồn tại người dùng, sản phẩm và giới hạn đánh giá 1 lần.

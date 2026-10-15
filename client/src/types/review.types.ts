@@ -12,3 +12,9 @@ export type ReviewRequest = {
   rating: number;
   content: string;
 };
+
+export type ReviewSummary = {
+  averageRating: number;
+  totalReviews: number;
+  distribution: Record<string, number>;
+};

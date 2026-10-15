@@ -9,11 +9,16 @@ import { PaymentStatusView } from "@/components/checkout/PaymentStatusView";
 import { Loading } from "@/components/ui/Loading";
 import type { ApiOrder, ApiPayment } from "@/types/order.types";
 
+// The Java payment endpoints return the PaymentResponse directly, but some
+// responses may still be wrapped in the ApiResponse envelope. Support both.
+type PaymentApiShape = ApiPayment & { data?: ApiPayment };
+
 async function fetchPaymentData(orderId: string | number): Promise<ApiPayment | null> {
   try {
-    const res = await apiClient<any>(`/api/payment/create?orderId=${orderId}`, {
-      method: "POST",
-    });
+    const res = await apiClient<PaymentApiShape>(
+      `/api/payment/create?orderId=${orderId}`,
+      { method: "POST" },
+    );
     if (res) {
       return res.data ?? res;
     }
@@ -22,7 +27,9 @@ async function fetchPaymentData(orderId: string | number): Promise<ApiPayment | 
   }
 
   try {
-    const checkRes = await apiClient<any>(`/api/payment/check?orderId=${orderId}`);
+    const checkRes = await apiClient<PaymentApiShape>(
+      `/api/payment/check?orderId=${orderId}`,
+    );
     if (checkRes) {
       return checkRes.data ?? checkRes;
     }
@@ -79,8 +86,8 @@ function QrPaymentContent() {
   }, [orderId]);
 
   useEffect(() => {
-    setLoading(true);
-    loadData();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadData();
   }, [loadData]);
 
   if (loading) {

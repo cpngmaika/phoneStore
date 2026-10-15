@@ -33,6 +33,7 @@ export const apiEndpoints = {
     updateUser: "/api/admin/users/update",
     toggleUserStatus: "/api/admin/users/toggle-status",
     orders: "/api/admin/orders",
+    stats: "/api/admin/stats",
     updateOrderStatus: (id: number | string) =>
       `/api/admin/orders/${id}/status`,
     coupons: "/api/admin/coupons",

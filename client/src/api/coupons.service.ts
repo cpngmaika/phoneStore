@@ -1,9 +1,16 @@
 import { apiEndpoints } from "@/api/endpoints";
 import { requestData } from "@/api/response";
-import type { Coupon } from "@/types/coupon.types";
+import type { Coupon, CouponValidation } from "@/types/coupon.types";
 
 export function getAvailableCoupons() {
   return requestData<Coupon[]>(apiEndpoints.coupons);
+}
+
+export function validateCoupon(payload: { code: string; orderAmount: number }) {
+  return requestData<CouponValidation>(`${apiEndpoints.coupons}/validate`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export type CouponRequest = Omit<Coupon, "id">;

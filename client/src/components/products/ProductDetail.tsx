@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { createReview } from "@/api/reviews.service";
+import { createReview, getReviewSummary } from "@/api/reviews.service";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ProductSpecs } from "@/components/products/ProductSpecs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/product.utils";
 import type { Product } from "@/types/product.types";
+import type { ReviewSummary } from "@/types/review.types";
 import type { WarrantyPolicy } from "@/types/warranty.types";
 
 export function ProductDetail({
@@ -16,11 +17,13 @@ export function ProductDetail({
   reviewsError,
   warrantyPolicy,
   warrantyPolicyError,
+  reviewSummary,
 }: {
   product: Product;
   reviewsError: string | null;
   warrantyPolicy: WarrantyPolicy | null;
   warrantyPolicyError: string | null;
+  reviewSummary: ReviewSummary | null;
 }) {
   const { user } = useCurrentUser();
   const [rating, setRating] = useState(5);
@@ -28,15 +31,14 @@ export function ProductDetail({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviews, setReviews] = useState(product.reviews);
-  const primaryImage = product.images.find((image) => image.isPrimary);
-  const galleryImages = [
-    primaryImage,
-    ...product.images.filter((image) => !image.isPrimary),
-  ].filter(Boolean);
-  const averageRating = reviews.length
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) /
-      reviews.length
-    : null;
+  const [summary, setSummary] = useState<ReviewSummary | null>(reviewSummary);
+  const [activeImage, setActiveImage] = useState(0);
+  const images = product.images;
+  const averageRating = summary
+    ? summary.averageRating
+    : reviews.length
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : null;
 
   async function submitReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,6 +60,7 @@ export function ProductDetail({
         ...current,
       ]);
       setReviewContent("");
+      getReviewSummary(product.id).then(setSummary).catch(() => undefined);
     } catch (requestError) {
       setReviewError(
         requestError instanceof Error
@@ -72,31 +75,51 @@ export function ProductDetail({
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-12">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(24rem,0.8fr)]">
-        <section className="grid gap-4 sm:grid-cols-2">
-          {galleryImages.map((image, index) => (
-            <div
-              key={image?.imageUrl}
-              className={`overflow-hidden rounded-lg bg-surface-muted ${
-                index === 0 ? "sm:col-span-2" : ""
-              }`}
-            >
-              {image ? (
-                <div
-                  className={`relative ${index === 0 ? "aspect-[4/3]" : "aspect-square"}`}
+        <section className="space-y-4">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-surface-muted">
+            {images[activeImage] ? (
+              <Image
+                src={images[activeImage].imageUrl}
+                alt={`${product.name} image ${activeImage + 1}`}
+                fill
+                unoptimized
+                priority
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-5xl font-semibold text-border-strong">
+                {product.brand.name.charAt(0)}
+              </div>
+            )}
+          </div>
+          {images.length > 1 ? (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {images.map((image, index) => (
+                <button
+                  key={image.imageUrl}
+                  type="button"
+                  onClick={() => setActiveImage(index)}
+                  aria-label={`Xem ảnh ${index + 1}`}
+                  aria-current={index === activeImage}
+                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-md border bg-surface-muted transition ${
+                    index === activeImage
+                      ? "border-primary"
+                      : "border-border hover:border-border-strong"
+                  }`}
                 >
                   <Image
                     src={image.imageUrl}
-                    alt={`${product.name} image ${index + 1}`}
+                    alt={`${product.name} thumbnail ${index + 1}`}
                     fill
                     unoptimized
-                    priority={index === 0}
-                    sizes={index === 0 ? "(min-width: 1024px) 60vw, 100vw" : "50vw"}
+                    sizes="80px"
                     className="object-cover"
                   />
-                </div>
-              ) : null}
+                </button>
+              ))}
             </div>
-          ))}
+          ) : null}
         </section>
 
         <section className="space-y-6">
@@ -108,14 +131,14 @@ export function ProductDetail({
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium text-text-muted">
               <span>
                 {averageRating === null ? (
-                  "No reviews yet"
+                  "Chưa có đánh giá"
                 ) : (
                   <>
                     <span className="text-star">★</span> {averageRating.toFixed(1)}
                   </>
                 )}
               </span>
-              <span>{reviews.length} reviews</span>
+              <span>{reviews.length} đánh giá</span>
               <span>SKU {product.sku}</span>
             </div>
           </div>
@@ -177,24 +200,28 @@ export function ProductDetail({
           </section>
 
           <div className="rounded-lg border border-border bg-surface p-5">
-            <h2 className="text-lg font-semibold text-text">Reviews</h2>
+            <h2 className="text-lg font-semibold text-text">
+              Đánh giá sản phẩm
+            </h2>
             {reviewsError ? (
               <p role="alert" className="mt-3 text-sm text-red-700">
                 Không thể tải đánh giá: {reviewsError}
               </p>
             ) : null}
-            <div className="mt-4 space-y-4">
+
+            <ReviewSummary summary={summary} reviewCount={reviews.length} />
+
+            <div className="mt-5 space-y-4">
               {reviews.map((review, index) => (
                 <blockquote
                   key={review.id ?? `${review.content}-${index}`}
                   className="rounded-lg bg-surface-muted p-4 text-sm leading-6 text-text-muted"
                 >
                   <p className="font-semibold text-text">
-                    {review.reviewerName ?? "Khách hàng"} · {review.rating}.0 ★
+                    {review.reviewerName ?? "Khách hàng"} · {review.rating}.0{" "}
+                    <span className="text-star">★</span>
                   </p>
-                  <p className="mt-1">
-                    {review.content}
-                  </p>
+                  <p className="mt-1">{review.content}</p>
                 </blockquote>
               ))}
               {reviews.length === 0 && !reviewsError ? (
@@ -247,5 +274,71 @@ export function ProductDetail({
         </section>
       </div>
     </main>
+  );
+}
+
+function ReviewSummary({
+  summary,
+  reviewCount,
+}: {
+  summary: ReviewSummary | null;
+  reviewCount: number;
+}) {
+  const total = summary?.totalReviews ?? reviewCount;
+  const average = summary?.averageRating ?? 0;
+
+  if (total === 0) {
+    return (
+      <p className="mt-4 text-sm text-text-muted">
+        Chưa có đánh giá nào cho sản phẩm này.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="text-center sm:text-left">
+        <p className="text-4xl font-semibold text-text">
+          {average.toFixed(1)}
+          <span className="text-base font-normal text-text-muted"> / 5</span>
+        </p>
+        <p
+          className="mt-1 text-lg"
+          aria-label={`${average.toFixed(1)} trên 5 sao`}
+        >
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span
+              key={star}
+              className={
+                star <= Math.round(average) ? "text-star" : "text-border-strong"
+              }
+            >
+              ★
+            </span>
+          ))}
+        </p>
+        <p className="mt-1 text-sm text-text-muted">{total} đánh giá</p>
+      </div>
+      <ul className="space-y-1.5">
+        {[5, 4, 3, 2, 1].map((star) => {
+          const count = summary?.distribution?.[String(star)] ?? 0;
+          const percent = total ? Math.round((count / total) * 100) : 0;
+          return (
+            <li key={star} className="flex items-center gap-3 text-sm">
+              <span className="w-8 shrink-0 text-text-muted">{star} ★</span>
+              <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                <span
+                  className="block h-full rounded-full bg-primary"
+                  style={{ width: `${percent}%` }}
+                />
+              </span>
+              <span className="w-10 shrink-0 text-right text-text-muted">
+                {percent}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

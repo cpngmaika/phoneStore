@@ -1,109 +1,62 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { ProductDetail } from "@/components/products/ProductDetail";
-import { getProductById } from "@/api/products.service";
-import { getReviewsByProduct } from "@/api/reviews.service";
-import { getWarrantyPolicyById } from "@/api/warranty-policies.service";
-import type { Product, ProductReview } from "@/types/product.types";
-import type { WarrantyPolicy } from "@/types/warranty.types";
+import {
+  fetchProductById,
+  fetchProductReviews,
+  fetchReviewSummary,
+  fetchWarrantyPolicy,
+} from "@/lib/server-api";
+import type { ProductReview } from "@/types/product.types";
 
-export default function ProductDetailPage() {
-  const params = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [warrantyPolicy, setWarrantyPolicy] = useState<WarrantyPolicy | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [reviewsError, setReviewsError] = useState<string | null>(null);
-  const [warrantyPolicyError, setWarrantyPolicyError] = useState<string | null>(null);
+type ProductDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-  useEffect(() => {
-    let cancelled = false;
+export async function generateMetadata({
+  params,
+}: ProductDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const product = await fetchProductById(id).catch(() => null);
+  if (!product) return { title: "Sản phẩm | PhoneStore" };
+  return {
+    title: `${product.name} | PhoneStore`,
+    description: product.description?.slice(0, 160),
+  };
+}
 
-    getProductById(params.id)
-      .then(async (result) => {
-        if (!cancelled) {
-          setWarrantyPolicy(null);
-          setWarrantyPolicyError(null);
-        }
+export default async function ProductDetailPage({
+  params,
+}: ProductDetailPageProps) {
+  const { id } = await params;
+  const product = await fetchProductById(id).catch(() => null);
+  if (!product) notFound();
 
-        const [apiReviews, policy] = await Promise.all([
-          getReviewsByProduct(params.id).catch((requestError: unknown) => {
-            if (!cancelled) {
-              setReviewsError(
-                requestError instanceof Error
-                  ? requestError.message
-                  : "Không thể tải đánh giá.",
-              );
-            }
-            return [];
-          }),
-          result.warrantyPolicyId
-            ? getWarrantyPolicyById(result.warrantyPolicyId).catch(
-                (requestError: unknown) => {
-                  if (!cancelled) {
-                    setWarrantyPolicyError(
-                      requestError instanceof Error
-                        ? requestError.message
-                        : "Không thể tải chính sách bảo hành.",
-                    );
-                  }
-                  return null;
-                },
-              )
-            : Promise.resolve(null),
-        ]);
+  const [apiReviews, warrantyPolicy, reviewSummary] = await Promise.all([
+    fetchProductReviews(id).catch(() => []),
+    product.warrantyPolicyId
+      ? fetchWarrantyPolicy(product.warrantyPolicyId)
+      : Promise.resolve(null),
+    fetchReviewSummary(id).catch(() => null),
+  ]);
 
-        if (!cancelled) {
-          const reviews: ProductReview[] = apiReviews
-            .filter((review) => !review.isHidden)
-            .map(({ id, reviewerName, rating, content }) => ({
-              id,
-              reviewerName,
-              rating,
-              content,
-            }));
-          setWarrantyPolicy(policy);
-          setProduct({ ...result, reviews });
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (!cancelled) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Không tìm thấy sản phẩm.",
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [params.id]);
-
-  if (error) {
-    return (
-      <main className="mx-auto max-w-4xl px-5 py-16 text-center">
-        <p role="alert" className="text-red-700">{error}</p>
-        <Link href="/" className="mt-5 inline-block font-semibold text-primary">
-          Quay lại cửa hàng
-        </Link>
-      </main>
-    );
-  }
-
-  if (!product) {
-    return <main className="mx-auto max-w-7xl px-5 py-16 text-text-muted" role="status">Đang tải sản phẩm...</main>;
-  }
+  const reviews: ProductReview[] = apiReviews
+    .filter((review) => !review.isHidden)
+    .map(({ id: reviewId, reviewerName, rating, content }) => ({
+      id: reviewId,
+      reviewerName,
+      rating,
+      content,
+    }));
 
   return (
     <ProductDetail
       key={product.id}
-      product={product}
-      reviewsError={reviewsError}
+      product={{ ...product, reviews }}
+      reviewsError={null}
       warrantyPolicy={warrantyPolicy}
-      warrantyPolicyError={warrantyPolicyError}
+      warrantyPolicyError={null}
+      reviewSummary={reviewSummary}
     />
   );
 }

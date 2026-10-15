@@ -10,3 +10,10 @@ export type Coupon = {
   isActive: boolean;
   usageLimit: number;
 };
+
+export type CouponValidation = {
+  code: string;
+  orderAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+};

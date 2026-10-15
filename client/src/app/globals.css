@@ -3,20 +3,22 @@
 
 :root {
   --color-bg: #ffffff;
-  --color-bg-soft: #f7f7f7;
+  --color-bg-soft: #fafafa;
   --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f5;
-  --color-text: #222222;
-  --color-text-muted: #717171;
-  --color-border: #dddddd;
-  --color-border-strong: #b0b0b0;
+  --color-surface-muted: #f6f6f6;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b6b6b;
+  --color-border: #e7e7e7;
+  --color-border-strong: #c7c7c7;
   --color-primary: #ff385c;
   --color-primary-dark: #d70466;
   --color-primary-soft: #fff1f4;
   --color-star: #ffb400;
-  --color-shadow: rgb(0 0 0 / 0.08);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  --color-shadow: rgb(17 17 17 / 0.06);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-display), "Playfair Display", ui-serif, Georgia,
+    "Times New Roman", serif;
 }
 
 @theme inline {
@@ -33,6 +35,7 @@
   --color-primary-soft: var(--color-primary-soft);
   --color-star: var(--color-star);
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
 }
 
 * {
@@ -43,13 +46,13 @@ html {
   background: var(--color-bg);
   color: var(--color-text);
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, var(--color-primary-soft), transparent 30rem),
-    var(--color-bg);
+  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
 }
@@ -64,4 +67,17 @@ textarea {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Editorial typographic rhythm for serif display headings. */
+.font-display,
+.font-serif {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: #ffffff;
 }

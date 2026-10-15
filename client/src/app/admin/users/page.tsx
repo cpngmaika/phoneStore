@@ -98,6 +98,7 @@ export default function AdminUsersPage() {
    */
   useEffect(() => {
     if (user?.role !== "ADMIN") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);

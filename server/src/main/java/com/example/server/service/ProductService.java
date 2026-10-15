@@ -6,6 +6,7 @@ import com.example.server.dao.WarrantyPolicyDao;
 import com.example.server.dao.impl.BrandDaoImpl;
 import com.example.server.dao.impl.ProductDaoImpl;
 import com.example.server.dao.impl.WarrantyPolicyDaoImpl;
+import com.example.server.dto.product.PagedProductResponse;
 import com.example.server.dto.product.ProductCreateRequest;
 import com.example.server.dto.product.ProductResponse;
 import com.example.server.exception.AppException;
@@ -41,6 +42,32 @@ public class ProductService {
         return productDao.search(keyword, category, brandId, minPrice, maxPrice).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    // Tìm kiếm có phân trang và sắp xếp phía máy chủ dành cho danh mục sản phẩm công khai.
+    public PagedProductResponse searchProductsPaged(
+            String keyword,
+            Category category,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            int page,
+            int size
+    ) {
+        int safeSize = Math.min(Math.max(size, 1), 60);
+        int safePage = Math.max(page, 1);
+        long total = productDao.count(keyword, category, brandId, minPrice, maxPrice);
+        int totalPages = total == 0 ? 0 : (int) Math.ceil((double) total / safeSize);
+        int offset = (safePage - 1) * safeSize;
+
+        List<ProductResponse> content = productDao
+                .searchPaged(keyword, category, brandId, minPrice, maxPrice, sort, offset, safeSize)
+                .stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+
+        return new PagedProductResponse(content, safePage, safeSize, total, totalPages);
     }
 
     // Tạo mới một sản phẩm dựa theo danh mục (Category) tương ứng và lưu trữ hình ảnh kèm theo.

@@ -3,6 +3,7 @@ package com.example.server.controller;
 import com.example.server.dto.common.ApiResponse;
 import com.example.server.dto.review.ReviewCreateRequest;
 import com.example.server.dto.review.ReviewResponse;
+import com.example.server.dto.review.ReviewSummaryResponse;
 import com.example.server.model.User;
 import com.example.server.service.ReviewService;
 import com.example.server.util.SessionUtil;
@@ -36,9 +37,15 @@ public class ReviewServlet extends HttpServlet {
         String pathInfo = req.getPathInfo(); // Mong đợi dạng /product/{productId} hoặc query param
 
         try {
-            // Ví dụ: /api/reviews/product?productId=1 hoặc xử lý pathInfo
             String productIdParam = req.getParameter("productId");
-            if (productIdParam != null) {
+            if ("/summary".equals(pathInfo)) {
+                if (productIdParam == null) {
+                    throw new IllegalArgumentException("Thiếu tham số productId để lấy tổng hợp đánh giá");
+                }
+                ReviewSummaryResponse summary =
+                        reviewService.getReviewSummary(Long.parseLong(productIdParam));
+                resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(summary)));
+            } else if (productIdParam != null) {
                 Long productId = Long.parseLong(productIdParam);
                 List<ReviewResponse> reviews = reviewService.getReviewsByProduct(productId);
                 resp.getWriter().write(objectMapper.writeValueAsString(ApiResponse.success(reviews)));

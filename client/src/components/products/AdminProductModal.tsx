@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getApiOrigin } from "@/api/client";
 import { getProductImageStoragePath } from "@/api/products.service";
 import type { ApiBrand } from "@/types/brand.types";
@@ -102,6 +102,36 @@ export function AdminProductModal({
     product?.images.map((image) => getProductImageStoragePath(image.imageUrl)) ??
       [],
   );
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+
+  const newFilePreviews = useMemo(
+    () => newFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [newFiles],
+  );
+  useEffect(
+    () => () => newFilePreviews.forEach((preview) => URL.revokeObjectURL(preview.url)),
+    [newFilePreviews],
+  );
+
+  function moveImage(index: number, direction: number) {
+    setImageUrls((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function makePrimary(index: number) {
+    setImageUrls((current) => {
+      if (index <= 0) return current;
+      const next = [...current];
+      const [chosen] = next.splice(index, 1);
+      next.unshift(chosen);
+      return next;
+    });
+  }
 
   return (
     <div
@@ -237,10 +267,16 @@ export function AdminProductModal({
           </div>
 
           <div className="space-y-3 text-sm font-medium text-text sm:col-span-2 lg:col-span-3">
-            <p>Ảnh sản phẩm ({imageUrls.length}/8 ảnh hiện có)</p>
+            <p>
+              Ảnh sản phẩm · {imageUrls.length + newFiles.length}/8
+              {newFiles.length > 0 ? ` (thêm mới ${newFiles.length})` : ""}
+            </p>
+            <p className="text-xs font-normal text-text-muted">
+              Ảnh đầu tiên là ảnh chính. Dùng nút để đặt ảnh chính hoặc sắp xếp.
+            </p>
             {imageUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {imageUrls.map((imageUrl) => (
+                {imageUrls.map((imageUrl, index) => (
                   <div key={imageUrl} className="space-y-2">
                     <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-muted">
                       <Image
@@ -251,18 +287,79 @@ export function AdminProductModal({
                         sizes="160px"
                         className="object-cover"
                       />
+                      {index === 0 ? (
+                        <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                          Ảnh chính
+                        </span>
+                      ) : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setImageUrls((current) => current.filter((url) => url !== imageUrl))}
-                      className="text-sm font-semibold text-red-700"
-                    >
-                      Gỡ ảnh
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                      {index !== 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => makePrimary(index)}
+                          className="text-primary"
+                        >
+                          Ảnh chính
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, -1)}
+                        disabled={index === 0}
+                        aria-label="Di chuyển sang trái"
+                        className="rounded border border-border px-1.5 text-text disabled:opacity-40"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 1)}
+                        disabled={index === imageUrls.length - 1}
+                        aria-label="Di chuyển sang phải"
+                        className="rounded border border-border px-1.5 text-text disabled:opacity-40"
+                      >
+                        →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setImageUrls((current) =>
+                            current.filter((url) => url !== imageUrl),
+                          )
+                        }
+                        className="text-red-700"
+                      >
+                        Gỡ
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : null}
+
+            {newFilePreviews.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {newFilePreviews.map(({ file, url }) => (
+                  <div key={url} className="space-y-2">
+                    <div className="relative aspect-square overflow-hidden rounded-lg bg-surface-muted">
+                      <Image
+                        src={url}
+                        alt={file.name}
+                        fill
+                        unoptimized
+                        sizes="160px"
+                        className="object-cover opacity-90"
+                      />
+                      <span className="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-xs font-semibold text-text">
+                        Mới
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <label className="block space-y-1">
               <span>Chọn ảnh tải lên (JPEG, PNG, GIF, WebP; tối đa 5 MB/ảnh)</span>
               <input
@@ -270,7 +367,10 @@ export function AdminProductModal({
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
                 multiple
-                disabled={imageUrls.length >= 8}
+                disabled={imageUrls.length + newFiles.length >= 8}
+                onChange={(event) =>
+                  setNewFiles(Array.from(event.currentTarget.files ?? []))
+                }
                 className="block w-full rounded-lg border border-border p-3 text-sm"
               />
             </label>

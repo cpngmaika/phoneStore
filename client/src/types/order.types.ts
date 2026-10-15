@@ -26,6 +26,7 @@ export type ApiOrder = {
   id: number;
   orderCode: string;
   status: OrderStatus;
+  orderDate?: string | null;
   totalAmount: number;
   couponCode: string | null;
   items: ApiOrderItem[];

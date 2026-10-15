@@ -1,5 +1,6 @@
 import { apiEndpoints } from "@/api/endpoints";
 import { requestData } from "@/api/response";
+import type { AdminStats } from "@/types/admin.types";
 import type { ApiOrder, OrderStatus } from "@/types/order.types";
 import type {
   AdminUserCreateRequest,
@@ -62,6 +63,10 @@ export function toggleAdminUserStatus(
 
 export function getAdminOrders() {
   return requestData<ApiOrder[]>(apiEndpoints.admin.orders);
+}
+
+export function getAdminStats() {
+  return requestData<AdminStats>(apiEndpoints.admin.stats);
 }
 
 export function updateOrderStatus(id: number | string, status: OrderStatus) {

@@ -6,14 +6,19 @@ import Link from "next/link";
 import { CartItem } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { createOrder } from "@/api/orders.service";
-import { getAvailableCoupons } from "@/api/coupons.service";
+import { getAvailableCoupons, validateCoupon } from "@/api/coupons.service";
 import { useCart } from "@/hooks/cart.hooks";
-import type { Coupon } from "@/types/coupon.types";
+import { formatCurrency } from "@/lib/product.utils";
+import type { Coupon, CouponValidation } from "@/types/coupon.types";
 
 export default function CartPage() {
   const router = useRouter();
   const { cart, clearCart } = useCart();
   const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidation | null>(
+    null,
+  );
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -38,6 +43,35 @@ export default function CartPage() {
       cancelled = true;
     };
   }, []);
+
+  function selectCoupon(code: string) {
+    setCouponCode(code);
+    setAppliedCoupon(null);
+    setError(null);
+  }
+
+  async function applyCoupon() {
+    const code = couponCode.trim();
+    if (!code) {
+      setAppliedCoupon(null);
+      return;
+    }
+    setApplyingCoupon(true);
+    setError(null);
+    try {
+      const result = await validateCoupon({ code, orderAmount: cart.total });
+      setAppliedCoupon(result);
+    } catch (requestError) {
+      setAppliedCoupon(null);
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Mã giảm giá không hợp lệ.",
+      );
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
 
   async function placeOrder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,13 +134,35 @@ export default function CartPage() {
               <label htmlFor="coupon" className="text-sm font-semibold text-text">
                 Mã giảm giá (không bắt buộc)
               </label>
-              <input
-                id="coupon"
-                value={couponCode}
-                onChange={(event) => setCouponCode(event.target.value)}
-                className="mt-2 h-11 w-full rounded-lg border border-border px-3 outline-none focus:border-primary"
-                placeholder="Nhập mã giảm giá"
-              />
+              <div className="mt-2 flex gap-2">
+                <input
+                  id="coupon"
+                  value={couponCode}
+                  onChange={(event) => {
+                    setCouponCode(event.target.value.toUpperCase());
+                    setAppliedCoupon(null);
+                  }}
+                  className="h-11 flex-1 rounded-lg border border-border px-3 outline-none focus:border-primary"
+                  placeholder="Nhập mã giảm giá"
+                />
+                <button
+                  type="button"
+                  onClick={() => void applyCoupon()}
+                  disabled={applyingCoupon || !couponCode.trim()}
+                  className="h-11 shrink-0 rounded-lg border border-primary px-4 text-sm font-semibold text-primary transition hover:bg-primary-soft disabled:opacity-50"
+                >
+                  {applyingCoupon ? "Đang kiểm tra..." : "Áp dụng"}
+                </button>
+              </div>
+              {appliedCoupon ? (
+                <p
+                  role="status"
+                  className="mt-3 text-sm font-medium text-green-700"
+                >
+                  Đã áp dụng {appliedCoupon.code} · giảm{" "}
+                  {formatCurrency(appliedCoupon.discountAmount)}
+                </p>
+              ) : null}
               {couponLoadError ? (
                 <p role="alert" className="mt-3 text-sm text-red-700">
                   Không thể tải mã giảm giá: {couponLoadError}
@@ -119,7 +175,7 @@ export default function CartPage() {
                       <button
                         key={coupon.id}
                         type="button"
-                        onClick={() => setCouponCode(coupon.code)}
+                        onClick={() => selectCoupon(coupon.code)}
                         className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                           couponCode === coupon.code
                             ? "border-primary bg-primary-soft text-primary"
@@ -147,6 +203,8 @@ export default function CartPage() {
       </section>
       <CartSummary
         placingOrder={placingOrder}
+        discountAmount={appliedCoupon?.discountAmount ?? 0}
+        finalTotal={appliedCoupon?.finalAmount}
       />
     </main>
   );

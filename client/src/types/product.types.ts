@@ -7,6 +7,13 @@ export type ProductCategory =
   | "CASE";
 
 export type ProductStatus = "ACTIVE" | "HIDDEN" | "OUT_OF_STOCK";
+
+export type ProductSort =
+  | "default"
+  | "newest"
+  | "price_asc"
+  | "price_desc"
+  | "name_asc";
 export type ApiProductStatus =
   | "IN_STOCK"
   | "OUT_OF_STOCK"
@@ -119,6 +126,33 @@ export type ApiProduct = {
     material?: string | null;
     compatibleModel?: string | null;
   };
+};
+
+export type ProductSearchFilters = {
+  keyword?: string;
+  category?: ProductCategory;
+  brandId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: ProductSort;
+  page?: number;
+  size?: number;
+};
+
+export type ApiPagedProducts = {
+  content: ApiProduct[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type PagedProducts = {
+  products: Product[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 export type ProductRequest = {
