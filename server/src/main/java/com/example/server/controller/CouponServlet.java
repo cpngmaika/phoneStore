@@ -4,6 +4,7 @@ import com.example.server.dto.common.ApiResponse;
 import com.example.server.dto.coupon.CouponResponse;
 import com.example.server.service.CouponService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -25,6 +26,7 @@ public class CouponServlet extends HttpServlet {
     public CouponServlet() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Override

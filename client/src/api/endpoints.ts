@@ -35,6 +35,8 @@ export const apiEndpoints = {
     orders: "/api/admin/orders",
     updateOrderStatus: (id: number | string) =>
       `/api/admin/orders/${id}/status`,
+    coupons: "/api/admin/coupons",
+    coupon: (id: number | string) => `/api/admin/coupons/${id}`,
   },
   brands: {
     list: "/api/brands",

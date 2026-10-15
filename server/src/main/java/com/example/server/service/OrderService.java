@@ -153,6 +153,19 @@ public class OrderService {
 
                 Coupon coupon = coupons.get(0);
 
+                Long usageCount = em.createQuery(
+                                "SELECT COUNT(o) FROM Order o WHERE o.coupon = :coupon",
+                                Long.class
+                        )
+                        .setParameter("coupon", coupon)
+                        .getSingleResult();
+                if (coupon.getUsageLimit() != null
+                        && usageCount >= coupon.getUsageLimit()) {
+                    throw new IllegalArgumentException(
+                            "Mã giảm giá đã hết lượt sử dụng."
+                    );
+                }
+
                 if (!coupon.isValid(tongTienHang)) {
                     throw new IllegalArgumentException(
                             "Mã giảm giá không hợp lệ hoặc "
