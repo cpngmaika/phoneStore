@@ -11,8 +11,13 @@ import { useCart } from "@/hooks/cart.hooks";
 import type { Coupon } from "@/types/coupon.types";
 
 export default function CartPage() {
-  const router = useRouter();
-  const { cart, clearCart } = useCart();
+  const router = useRouter();  const {
+    cart,
+    clearCart,
+    loading: cartLoading,
+    loggedIn,
+    error: cartError,
+  } = useCart();
   const [couponCode, setCouponCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -78,8 +83,24 @@ export default function CartPage() {
           <p className="text-sm font-semibold text-primary">Giỏ hàng</p>
           <h1 className="mt-2 text-3xl font-semibold text-text">Sản phẩm của bạn</h1>
         </div>
-        {cart.items.length === 0 ? (
-          <div className="rounded-xl border border-border bg-surface p-8 text-center">
+        {cartError ? (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {cartError}
+            </p>
+        ) : null}
+        {cartLoading ? (
+            <div className="rounded-xl border border-border bg-surface p-8 text-center text-text-muted">
+              Đang tải giỏ hàng...
+            </div>
+        ) : !loggedIn ? (
+            <div className="rounded-xl border border-border bg-surface p-8 text-center">
+              <p className="text-text-muted">Vui lòng đăng nhập để xem giỏ hàng.</p>
+              <Link href="/login" className="mt-4 inline-flex font-semibold text-primary">
+                Đăng nhập
+              </Link>
+            </div>
+        ) : cart.items.length === 0 ? (
+            <div className="rounded-xl border border-border bg-surface p-8 text-center">
             <p className="text-text-muted">Giỏ hàng đang trống.</p>
             <Link href="/" className="mt-4 inline-flex font-semibold text-primary">
               Tiếp tục mua sắm

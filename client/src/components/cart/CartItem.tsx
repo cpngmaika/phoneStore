@@ -28,9 +28,11 @@ export function CartItem({ item }: { item: CartItemData }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold text-text">{item.product.name}</h3>
-            <p className="mt-1 text-sm text-text-muted">
-              {item.product.brand.name}
-            </p>
+            {item.product.brand.name ? (
+                <p className="mt-1 text-sm text-text-muted">
+                  {item.product.brand.name}
+                </p>
+            ) : null}
           </div>
           <p className="font-semibold text-text">{formatCurrency(item.subtotal)}</p>
         </div>

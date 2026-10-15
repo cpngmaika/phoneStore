@@ -1,6 +1,8 @@
 import type { Product } from "@/types/product.types";
 
 export type CartItem = {
+  /** id của LineItem trên server, dùng cho PUT/DELETE /api/cart/items/{itemId} */
+  itemId?: number;
   product: Product;
   quantity: number;
   subtotal: number;
@@ -23,7 +25,7 @@ export type ApiCartItem = {
 };
 
 export type ApiCart = {
-  id: number;
+  id: number | null;
   userId: number;
   items: ApiCartItem[];
   totalAmount: number;
