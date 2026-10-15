@@ -1,14 +1,15 @@
-const candidateBases = Array.from(
-  new Set(
-    [
-      process.env.NEXT_PUBLIC_API_URL,
-      "http://localhost:8080",
-      "http://localhost:8080/server_war_exploded",
-    ]
-      .filter((url): url is string => Boolean(url))
-      .map((url) => url.replace(/\/+$/, "")),
-  ),
-);
+// In production the browser must always talk to the same origin so requests go
+// through the Next.js rewrite/proxy. This keeps the session cookie first-party,
+// avoids CORS, and stops a stale NEXT_PUBLIC_API_URL (e.g. a localhost URL) from
+// leaking into the deployed bundle. NEXT_PUBLIC_API_URL is honored in dev only.
+const configuredBase =
+  process.env.NODE_ENV === "production"
+    ? undefined
+    : process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+
+// No explicit base => same-origin relative base (""), resolved by the browser
+// against the current origin (the rewrite proxy target).
+const candidateBases = configuredBase ? [configuredBase] : [""];
 
 let cachedBaseUrl: string | null = null;
 
@@ -17,7 +18,11 @@ export function getApiBaseUrl() {
 }
 
 export function getApiOrigin() {
-  return new URL(getApiBaseUrl()).origin;
+  const base = getApiBaseUrl();
+  if (!base) {
+    return typeof window !== "undefined" ? window.location.origin : "";
+  }
+  return new URL(base).origin;
 }
 
 export function getApiAssetUrl(assetUrl: string | null | undefined) {
@@ -25,7 +30,8 @@ export function getApiAssetUrl(assetUrl: string | null | undefined) {
     assetUrl?.includes("/api/product-images/") &&
     !/^[a-z][a-z\d+.-]*:/i.test(assetUrl)
   ) {
-    return `${getApiOrigin()}${assetUrl}`;
+    const origin = getApiOrigin();
+    return origin ? `${origin}${assetUrl}` : assetUrl;
   }
   return assetUrl;
 }

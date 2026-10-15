@@ -44,6 +44,7 @@ scripts
 
 
 .env
+.env.production
 umlDiagramForPhoneStore.drawio
 
 AGENTS.md

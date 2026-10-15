@@ -1,6 +1,24 @@
 import type { NextConfig } from "next";
 
+const backendBaseUrl = (
+  process.env.BACKEND_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  ""
+).replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    if (!backendBaseUrl) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendBaseUrl}/api/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -16,6 +34,9 @@ const nextConfig: NextConfig = {
       },{
         protocol: "http",
         hostname:"localhost",
+      },{
+        protocol: "https",
+        hostname:"*.onrender.com",
       }
     ],
   },
