@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * - Luồng xử lý:
- *   1. Thu thập dữ liệu từ Form (sử dụng FormData API tiêu chuẩn).
- *   2. Gửi yêu cầu POST tới API /api/auth/login thông qua auth.service.ts.
- *   3. Nếu thành công: Backend khởi tạo Session, Frontend phân quyền điều hướng:
- *      + ADMIN    -> chuyển hướng đến trang Quản trị (/admin).
- *      + CUSTOMER -> chuyển hướng đến trang Hồ sơ cá nhân (/profile).
- *   4. Nếu thất bại: Hiển thị thông báo lỗi từ Backend (sai mật khẩu, tài khoản bị khóa...).
- */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -92,7 +83,15 @@ export default function LoginPage() {
 
         {/* Ô nhập Mật khẩu */}
         <label className="block text-sm font-semibold text-text">
-          Mật khẩu
+          <div className="flex items-center justify-between">
+            <span>Mật khẩu</span>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           <input
             name="password"
             type="password"

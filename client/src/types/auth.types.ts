@@ -12,3 +12,10 @@ export type RegisterRequest = {
   password: string;
   phone?: string;
 };
+
+export type ResetPasswordRequest = {
+  email: string;
+  phone: string;
+  newPassword: string;
+};
+

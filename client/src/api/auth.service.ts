@@ -1,6 +1,6 @@
 import { apiEndpoints } from "@/api/endpoints";
 import { requestData } from "@/api/response";
-import type { LoginRequest, RegisterRequest } from "@/types/auth.types";
+import type { LoginRequest, RegisterRequest, ResetPasswordRequest } from "@/types/auth.types";
 import type { ApiUser } from "@/types/user.types";
 
 export function login(payload: LoginRequest) {
@@ -12,6 +12,13 @@ export function login(payload: LoginRequest) {
 
 export function register(payload: RegisterRequest) {
   return requestData<ApiUser>(apiEndpoints.auth.register, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetPassword(payload: ResetPasswordRequest) {
+  return requestData<null>(apiEndpoints.auth.resetPassword, {
     method: "POST",
     body: JSON.stringify(payload),
   });

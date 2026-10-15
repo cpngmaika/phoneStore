@@ -55,7 +55,8 @@ export function AdminUsersControls({
             name="password"
             required
             type="password"
-            placeholder="Mật khẩu"
+            minLength={8}
+            placeholder="Mật khẩu (tối thiểu 8 ký tự)"
             className="h-10 rounded-lg border border-border px-3 text-sm outline-none focus:border-primary"
           />
           <input

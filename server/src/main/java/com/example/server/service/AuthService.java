@@ -4,6 +4,7 @@ import com.example.server.dao.UserDao;
 import com.example.server.dao.impl.UserDaoImpl;
 import com.example.server.dto.auth.LoginRequest;
 import com.example.server.dto.auth.RegisterRequest;
+import com.example.server.dto.auth.ResetPasswordRequest;
 import com.example.server.model.User;
 import com.example.server.model.enums.Role;
 import com.example.server.model.enums.UserStatus;
@@ -78,5 +79,35 @@ public class AuthService {
         }
 
         return user;
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Invalid request");
+        }
+        ValidationUtil.validateEmail(request.getEmail());
+        ValidationUtil.validatePassword(request.getNewPassword());
+        if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+
+        Optional<User> userOpt = userDao.findByEmail(request.getEmail().trim());
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("Email does not exist");
+        }
+
+        User user = userOpt.get();
+
+        if (user.getPhone() == null || !user.getPhone().trim().equals(request.getPhone().trim())) {
+            throw new RuntimeException("Phone number does not match registered phone number");
+        }
+
+        if (user.getStatus() == UserStatus.LOCKED) {
+            throw new RuntimeException("Your account is locked");
+        }
+
+        String hashedPassword = BCrypt.hashpw(request.getNewPassword(), BCrypt.gensalt());
+        user.setPasswordHash(hashedPassword);
+        userDao.update(user);
     }
 }

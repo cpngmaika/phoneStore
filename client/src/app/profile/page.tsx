@@ -1,21 +1,5 @@
 "use client";
 
-/**
- * =============================================================================
- * TRANG QUẢN LÝ HỒ SƠ CÁ NHÂN (USER PROFILE & ADDRESS MANAGEMENT)
- * =============================================================================
- * - Vai trò: Cho phép người dùng đã đăng nhập:
- *   1. Xem và cập nhật thông tin cá nhân (Họ tên, Số điện thoại).
- *   2. Đổi mật khẩu tài khoản (yêu cầu mật khẩu cũ và mật khẩu mới).
- *   3. Quản lý sổ địa chỉ nhận hàng (Xem danh sách, Thêm mới, Xóa địa chỉ).
- * - Luồng hoạt động:
- *   + Khi nạp trang (useEffect): Gọi song song 2 API getProfile() và getAddresses()
- *     thông qua Promise.all để lấy dữ liệu từ Backend.
- *   + Cập nhật thông tin: Gửi request PUT /api/user/profile.
- *   + Đổi mật khẩu: Gửi request POST /api/user/change-password.
- *   + Địa chỉ nhận hàng: Gửi POST /api/user/addresses (thêm) hoặc DELETE /api/user/addresses/{id} (xóa).
- * =============================================================================
- */
 
 import { useEffect, useState } from "react";
 import { ProfileView } from "@/components/profile/ProfileView";

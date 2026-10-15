@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * - Vai trò: Cho phép Quản trị viên (ADMIN) theo dõi toàn bộ danh sách tài khoản
- *   người dùng trên hệ thống, tìm kiếm, lọc phân loại, tạo mới và khóa / mở khóa tài khoản.
- * - Các tính năng chính:
- *   1. Kiểm soát quyền truy cập: Chỉ cho phép người dùng có vai trò ADMIN thao tác.
- *   2. Tải & Lọc danh sách: Gọi API GET /api/admin/users hỗ trợ tìm kiếm động theo keyword, role, status.
- *   3. Tìm kiếm linh hoạt: Tìm theo tên, email, SĐT; lọc tức thì theo vai trò (CUSTOMER/ADMIN) và trạng thái (ACTIVE/LOCKED).
- *   4. Tạo tài khoản mới: Quản trị viên có thể tạo trực tiếp tài khoản CUSTOMER hoặc ADMIN.
- *   5. Quản lý trạng thái: Khóa (LOCKED) hoặc Mở khóa (ACTIVE) người dùng theo thời gian thực.
- * =============================================================================
- */
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";

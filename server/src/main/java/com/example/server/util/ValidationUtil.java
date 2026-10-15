@@ -37,8 +37,8 @@ public final class ValidationUtil {
     }
 
     public static void validatePassword(String password) {
-        if (password == null || password.trim().length() < 6) {
-            throw new IllegalArgumentException("Password must have at least 6 characters");
+        if (password == null || password.trim().length() < 8) {
+            throw new IllegalArgumentException("Password must have at least 8 characters");
         }
     }
 

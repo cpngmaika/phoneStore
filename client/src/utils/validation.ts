@@ -40,11 +40,11 @@ export function isValidFullName(name: string): boolean {
 }
 
 /**
- * Validates password has at least 6 non-whitespace characters.
+ * Validates password has at least 8 non-whitespace characters.
  */
 export function isValidPassword(password: string): boolean {
   if (!password) return false;
-  return password.trim().length >= 6;
+  return password.trim().length >= 8;
 }
 
 /**

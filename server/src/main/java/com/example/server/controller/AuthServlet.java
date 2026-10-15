@@ -2,6 +2,7 @@ package com.example.server.controller;
 
 import com.example.server.dto.auth.LoginRequest;
 import com.example.server.dto.auth.RegisterRequest;
+import com.example.server.dto.auth.ResetPasswordRequest;
 import com.example.server.dto.common.ApiResponse;
 import com.example.server.model.User;
 import com.example.server.service.AuthService;
@@ -43,6 +44,12 @@ public class AuthServlet extends HttpServlet {
                 case "/logout":
                     SessionUtil.clearSession(req);
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Logout Successfully", null));
+                    break;
+                case "/reset-password":
+                case "/forgot-password":
+                    ResetPasswordRequest resetReq = JsonUtil.toObject(req, ResetPasswordRequest.class);
+                    authService.resetPassword(resetReq);
+                    JsonUtil.sendJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok("Reset Password Successfully", null));
                     break;
                 default:
                     JsonUtil.sendJson(resp, HttpServletResponse.SC_NOT_FOUND, ApiResponse.error("Endpoint not found"));

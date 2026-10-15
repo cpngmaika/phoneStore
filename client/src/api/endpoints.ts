@@ -4,6 +4,7 @@ export const apiEndpoints = {
     register: "/api/auth/register",
     logout: "/api/auth/logout",
     currentUser: "/api/auth/me",
+    resetPassword: "/api/auth/reset-password",
   },
   products: {
     list: "/api/products",
